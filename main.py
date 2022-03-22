@@ -82,7 +82,7 @@ class Grid:
             for i in range(3):
                 for j in range(3):
                     if self.size > y + i and 0 <= y + i - 1 and self.size > x + j and 0 <= x + j - 1:
-                        if not self.grid[x][y].is_discovered:
+                        if not self.grid[y + (i - 1)][x + (j - 1)].is_discovered:
                             self.case_press(x + (j - 1), y + (i - 1))
 
 
