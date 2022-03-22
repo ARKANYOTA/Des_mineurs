@@ -18,13 +18,46 @@ import sys
 #############
 #  CLASSES  #
 #############
-class Grid:
+class Globals:
+    # STATICS
+    GRID_SIZE = 50
+    ISIZE = WIDTH, HEIGHT = 900, 700
+    CASE_SIZE = 600 / GRID_SIZE
+    BOMBES = 5
+    GRID = None
+
+    # GLOBAL VARIABLES
+    run = True
+
+
+class Colors:
+    BLACK = pygame.Color(0, 0, 0)
+    WHITE = pygame.Color(255, 255, 255)
+
+
+class Pygame:
+    @staticmethod
+    def image(name: str, size: tuple):
+        return pygame.transform.scale(pygame.image.load(f'./ressources/normal/{name}.png'), size)
+
+
+class Grid(pygame.sprite.Group):
     def __init__(self, size: int, bombes: int):
-        self.grid = [[None for _ in range(size)] for _ in range(size)]
-        self.group = pygame.sprite.Group()
+        super().__init__()
         self.bombes = bombes
         self.size = size
         self.finished = False
+
+        y, yi = 0, 0
+        while y < 600:
+            x, xi = 0, 0
+            while x < 600:
+                img = Pygame.image('cell-covered', (Globals.CASE_SIZE, Globals.CASE_SIZE))
+                case = Case(img, (150+x, 50+y), (xi, yi), self)
+                x += Globals.CASE_SIZE
+                xi += 1
+            y += Globals.CASE_SIZE
+            yi += 1
 
     def start(self, x: int, y: int):
         rnd_grid = [[random.random() for _ in range(self.size)] for _ in range(self.size)]
@@ -54,8 +87,10 @@ class Grid:
         return self.finished or b
 
 
-class Case:
-    def __init__(self, screen_pos, grid_pos, grille):
+class Case(pygame.sprite.DirtySprite):
+    def __init__(self, image, screen_pos, grid_pos, grille):
+        super().__init__(grille)
+        self.image = image
         self.screen_pos = screen_pos
         self.grid_pos = grid_pos
         self.is_discovered = False
@@ -63,29 +98,10 @@ class Case:
         self.nb_bombes = 0
         self.sprite = None
         self.grille = grille
+        self.rect = self.image.get_rect()
 
-
-class Globals:
-    # STATICS
-    GRID_SIZE = 50
-    ISIZE = WIDTH, HEIGHT = 900, 700
-    CASE_SIZE = 600 / GRID_SIZE
-    BOMBES = 5
-    GRID = Grid(GRID_SIZE, BOMBES)
-
-    # GLOBAL VARIABLES
-    run = True
-
-
-class Colors:
-    BLACK = pygame.Color(0, 0, 0)
-    WHITE = pygame.Color(255, 255, 255)
-
-
-class Pygame:
-    @staticmethod
-    def image(name: str, size: tuple):
-        return pygame.transform.scale(pygame.image.load(f'./ressources/normal/{name}.png'), size)
+        self.rect.x = self.screen_pos[0]
+        self.rect.y = self.screen_pos[1]
 
 
 #############
@@ -94,26 +110,14 @@ class Pygame:
 def main():
     pygame.init()
     screen = pygame.display.set_mode(Globals.ISIZE)
+    Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
 
     while Globals.run:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 Globals.run = False
 
-        screen.fill(Colors.WHITE)
-        rect = pygame.rect.Rect(150, 50, 600, 600)
-        pygame.draw.rect(screen, Colors.BLACK, rect)
-
-        y, yi = 0, 0
-        while y < 600:
-            x, xi = 0, 0
-            while x < 600:
-                img = Pygame.image('cell-covered', (Globals.CASE_SIZE, Globals.CASE_SIZE))
-                screen.blit(img, (150+x, 50+y))
-                x += Globals.CASE_SIZE
-                xi += 1
-            y += Globals.CASE_SIZE
-            yi += 1
+        Globals.GRID.draw(screen)
         pygame.display.flip()
 
 
