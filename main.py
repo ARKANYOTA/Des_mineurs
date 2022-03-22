@@ -12,6 +12,7 @@
 import random
 import sys
 import os
+
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
 
@@ -55,13 +56,13 @@ class Grid:
                 if not case.is_discovered:
                     b = False
         return self.finished or b
-    
+
     def count_nb_de_voisins_bombes(self, x, y):
         voisins_bombes = 0
         for i in range(3):
             for j in range(3):
-                if self.size > y+i and 0 <= y+i-1 and self.size > x+j and 0 <= x+j-1:
-                     voisins_bombes += self.grid[y+(i-1)][x+(j-1)].is_bombe
+                if self.size > y + i and 0 <= y + i - 1 and self.size > x + j and 0 <= x + j - 1:
+                    voisins_bombes += self.grid[y + (i - 1)][x + (j - 1)].is_bombe
         return voisins_bombes
 
     def case_press(self, x, y):
@@ -76,15 +77,10 @@ class Grid:
         if nb_de_bombdes_autour == 0:
             for i in range(3):
                 for j in range(3):
-                    if self.size > y+i and 0 <= y+i-1 and self.size > x+j and 0 <= x+j-1:
-                        self.case_press(y+(i-1), x+(j-1))
-        
+                    if self.size > y + i and 0 <= y + i - 1 and self.size > x + j and 0 <= x + j - 1:
+                        self.case_press(y + (i - 1), x + (j - 1))
+
         self.grid[x][y].nb_bombes = nb_de_bombdes_autour
-        
-
-
-
-
 
 
 class Case:
@@ -143,7 +139,7 @@ def main():
             x, xi = 0, 0
             while x < 600:
                 img = Pygame.image('cell-covered', (Globals.CASE_SIZE, Globals.CASE_SIZE))
-                screen.blit(img, (150+x, 50+y))
+                screen.blit(img, (150 + x, 50 + y))
                 x += Globals.CASE_SIZE
                 xi += 1
             y += Globals.CASE_SIZE
@@ -161,11 +157,11 @@ if __name__ == "__main__":
         exit(0)
     if '--debug' in argv:
         del argv[argv.index("--debug")]
-        GLOBALS.debug = True
+        Globals.debug = True
     if 2 <= len(argv):
-        GLOBALS.GRID_SIZE = int(argv[0])
-        GLOBALS.BOMBES = int(argv[1])
+        Globals.GRID_SIZE = int(argv[0])
+        Globals.BOMBES = int(argv[1])
     elif 1 <= len(argv):
         print("[-] Usage: python main.py [--help] [--debug] [[GRID_SIZE] [nb_de_bombdes]]")
-        print(f"\t\\Default: Size={GLOBALS.GRID_SIZE}, bombes={GLOBALS.BOMBES}")
+        print(f"\t\\Default: Size={Globals.GRID_SIZE}, bombes={Globals.BOMBES}")
     main()
