@@ -12,7 +12,8 @@
 import random
 import sys
 import os
-sys.setrecursionlimit(3000)
+
+sys.setrecursionlimit(10000)
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
@@ -35,7 +36,7 @@ class Grid:
         # éviter de tomber direct sur une bombe et d'avoir des bombes juste a coté
         for i in range(3):
             for j in range(3):
-                if self.size > y + i and 0 <= y + i - 1 and self.size > x + j and 0 <= x + j - 1:
+                if self.size >= y + i and 0 <= y + i - 1 and self.size >= x + j and 0 <= x + j - 1:
                     rnd_grid[y + (i - 1)][x + (j - 1)] = 0
 
         # Récupère les self.bombes plus grandes valeurs pour les mettre dans la grille 
@@ -50,6 +51,8 @@ class Grid:
             self.grid[coords[1]][coords[0]].is_bombe = True
             rnd_grid[coords[1]][coords[0]] = 0
 
+        self.case_press(x, y)
+
     def is_finished(self):
         b = True
         for row in self.grid:
@@ -62,8 +65,9 @@ class Grid:
         voisins_bombes = 0
         for i in range(3):
             for j in range(3):
-                if self.size > y + i and 0 <= y + i - 1 and self.size > x + j and 0 <= x + j - 1:
-                    voisins_bombes += int(self.grid[y + (i - 1)][x + (j - 1)].is_bombe)
+                if self.size >= y + i and 0 <= y + i - 1 and self.size >= x + j and 0 <= x + j - 1:
+                    voisins_bombes += int(self.grid[y + (i - 1)][x + (j - 1)].is_bombe)  # Ajoute 1 si bombe, sinon 0
+
         return voisins_bombes
 
     def case_press(self, x, y):
@@ -81,10 +85,9 @@ class Grid:
             print(nb_de_bombdes_autour)
             for i in range(3):
                 for j in range(3):
-                    if self.size > y + i and 0 <= y + i - 1 and self.size > x + j and 0 <= x + j - 1:
-                        if not self.grid[y + (i - 1)][x + (j - 1)].is_discovered:
+                    if self.size >= y + i and 0 <= y + i - 1 and self.size >= x + j and 0 <= x + j - 1:
+                        if not self.grid[x + (j - 1)][y + (i - 1)].is_discovered:
                             self.case_press(x + (j - 1), y + (i - 1))
-
 
 
 class Case:
@@ -104,7 +107,7 @@ class Globals:
     GRID_SIZE = 50
     ISIZE = WIDTH, HEIGHT = 900, 700
     CASE_SIZE = 600 / GRID_SIZE
-    BOMBES = 200
+    BOMBES = 2000
     GRID = Grid(GRID_SIZE, BOMBES)
     debug = False
 
@@ -129,8 +132,7 @@ class Pygame:
 def main():
     pygame.init()
     screen = pygame.display.set_mode(Globals.ISIZE)
-    Globals.GRID.start(5,5)
-    Globals.GRID.case_press(40,45)
+    Globals.GRID.start(49//2, 49//2)
     while Globals.run:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -139,7 +141,6 @@ def main():
         screen.fill(Colors.WHITE)
         rect = pygame.rect.Rect(150, 50, 600, 600)
         pygame.draw.rect(screen, Colors.BLACK, rect)
-
 
         y, yi = 0, 0
         for lines in Globals.GRID.grid:
