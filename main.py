@@ -26,10 +26,10 @@ import pygame
 #############
 class Globals:
     # STATICS
-    GRID_SIZE = 50
+    GRID_SIZE = 20
     ISIZE = WIDTH, HEIGHT = 900, 700
     CASE_SIZE = 600 / GRID_SIZE
-    BOMBES = 5
+    BOMBES = 50
     GRID = None
 
     # GLOBAL VARIABLES
@@ -39,12 +39,21 @@ class Globals:
 class Colors:
     BLACK = pygame.Color(0, 0, 0)
     WHITE = pygame.Color(255, 255, 255)
+    BG = pygame.Color(189, 189, 189)
 
 
-class Pygame:
+def image(name: str, size: tuple):
+    return pygame.transform.scale(pygame.image.load(f'./ressources/normal/{name}.png'), size)
+
+class Images:
+    COVERED = image('cell-covered', (Globals.CASE_SIZE, Globals.CASE_SIZE))
+    FLAGGED = image('cell-flagged', (Globals.CASE_SIZE, Globals.CASE_SIZE))
+    MINE = image('mine', (Globals.CASE_SIZE, Globals.CASE_SIZE))
+    MINE_EXPLODE = image('mine-exploded', (Globals.CASE_SIZE, Globals.CASE_SIZE))
+
     @staticmethod
-    def image(name: str, size: tuple):
-        return pygame.transform.scale(pygame.image.load(f'./ressources/normal/{name}.png'), size)
+    def getCell(bombes: int):
+        return image(f'cell-{bombes}', (Globals.CASE_SIZE, Globals.CASE_SIZE))
 
 
 class Grid(pygame.sprite.Group):
@@ -53,19 +62,23 @@ class Grid(pygame.sprite.Group):
         self.bombes = bombes
         self.size = size
         self.finished = False
+        self.started = False
 
+        self.grid = []
         y, yi = 0, 0
         while y < 600:
+            self.grid.append([])
             x, xi = 0, 0
             while x < 600:
-                img = Pygame.image('cell-covered', (Globals.CASE_SIZE, Globals.CASE_SIZE))
-                case = Case(img, (150+x, 50+y), (xi, yi), self)
+                img = image('cell-covered', (Globals.CASE_SIZE, Globals.CASE_SIZE))
+                self.grid[yi].append(Case(img, (150 + x, 50 + y), (xi, yi), self))
                 x += Globals.CASE_SIZE
                 xi += 1
             y += Globals.CASE_SIZE
             yi += 1
 
     def start(self, x: int, y: int):
+        self.started = True
         rnd_grid = [[random.random() for _ in range(self.size)] for _ in range(self.size)]
 
         # éviter de tomber direct sur une bombe et d'avoir des bombes juste a coté
@@ -96,48 +109,54 @@ class Grid(pygame.sprite.Group):
                     b = False
         return self.finished or b
 
-    def count_nb_de_voisins_bombes(self, y, x):
+    def count_near_bombes(self, x, y):
         voisins_bombes = 0
         for i in range(3):
             for j in range(3):
                 if self.size >= y + i and 0 <= y + i - 1 and self.size >= x + j and 0 <= x + j - 1:
                     voisins_bombes += int(self.grid[y + (i - 1)][x + (j - 1)].is_bombe)  # Ajoute 1 si bombe, sinon 0
-
         return voisins_bombes
 
     def case_press(self, x, y):
-        if self.grid[x][y].is_flag:
-            print("Enlever le drapeau avant de découvrir la case")
-            return
-        if self.grid[x][y].is_discovered:
-            print("Case déjà découverte, Rejouez")
-            return
-        if self.grid[x][y].is_bombe:
-            self.finished = True
-            print("Vous avez perdu, Dommage")
-            return
-        self.grid[x][y].is_discovered = True
-        nb_de_bombdes_autour = self.count_nb_de_voisins_bombes(x, y)
-        self.grid[x][y].nb_bombes = nb_de_bombdes_autour
-        if nb_de_bombdes_autour == 0:
-            for i in range(3):
-                for j in range(3):
-                    if self.size >= y + i and 0 <= y + i - 1 and self.size >= x + j and 0 <= x + j - 1:
-                        if not self.grid[x + (j - 1)][y + (i - 1)].is_discovered:
-                            self.case_press(x + (j - 1), y + (i - 1))
+        if 0 <= x < Globals.GRID_SIZE and 0 <= y < Globals.GRID_SIZE:
+            case = self.grid[y][x]
+            if not self.started:
+                self.start(x, y)  # placer les bombes sur le terrain
+
+            if case.is_flag:
+                # print("Enlever le drapeau avant de découvrir la case")
+                return
+            if case.is_discovered:
+                # print("Case déjà découverte, Rejouez")
+                return
+            if case.is_bombe:
+                self.finished = True
+                case.is_discovered = True
+                case.image = Images.MINE_EXPLODE
+                # print("Vous avez perdu, Dommage")
+                return
+            case.is_discovered = True
+            nb_bombes = self.count_near_bombes(x, y)
+            case.nb_bombes = nb_bombes
+            case.image = Images.getCell(nb_bombes)
+            if nb_bombes == 0:
+                for i in range(3):
+                    for j in range(3):
+                        if self.size >= y + i and 0 <= y + i - 1 and self.size >= x + j and 0 <= x + j - 1:
+                            if not self.grid[y + (i - 1)][x + (j - 1)].is_discovered:
+                                self.case_press(x + (j - 1), y + (i - 1))
 
     def case_press_flag(self, x, y):
-        if self.grid[x][y].is_flag:
-            self.grid[x][y].is_flag = False
+        case = self.grid[y][x]
+        if case.is_flag:
+            case.is_flag = False
+            case.image = Images.COVERED
             return
-        if self.grid[x][y].is_discovered:
-            print("Case déjà découverte, Pourquoi mettre un drapeau ?")
+        if case.is_discovered:
+            # print("Case déjà découverte, Pourquoi mettre un drapeau ?")
             return
-        if self.grid[x][y].is_bombe:
-            print(f"Ce message ne devrait jamais apparaitre "
-                  f"mais sinon ça sert à rien de mettre un drapeau sur une bombe")
-            return
-        self.grid[x][y].is_flag = True
+        case.is_flag = True
+        case.image = Images.FLAGGED
 
     def __repr__(self):
         textout = ""
@@ -146,7 +165,6 @@ class Grid(pygame.sprite.Group):
                 textout += f'{case} '
             textout += "\n"
         return textout
-
 
 
 class Case(pygame.sprite.DirtySprite):
@@ -161,6 +179,10 @@ class Case(pygame.sprite.DirtySprite):
         self.sprite = None
         self.grille = grille
         self.is_flag = False
+        self.rect = self.image.get_rect()
+
+        self.rect.x = self.screen_pos[0]
+        self.rect.y = self.screen_pos[1]
 
     def __repr__(self):
         if os.name == 'posix':
@@ -185,24 +207,6 @@ class Case(pygame.sprite.DirtySprite):
             return "\u25A1"
 
 
-class Globals:
-    # STATICS
-    GRID_SIZE = 50
-    ISIZE = WIDTH, HEIGHT = 900, 700
-    CASE_SIZE = 600 / GRID_SIZE
-    BOMBES = min(200, (GRID_SIZE ** 2) - 9)
-    GRID = Grid(GRID_SIZE, BOMBES)
-    debug = False
-
-    # GLOBAL VARIABLES
-    run = True
-
-        self.rect = self.image.get_rect()
-
-        self.rect.x = self.screen_pos[0]
-        self.rect.y = self.screen_pos[1]
-
-
 #############
 #  FUNCTION #
 #############
@@ -215,7 +219,16 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 Globals.run = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                xPos, yPos = pygame.mouse.get_pos()
+                click = pygame.mouse.get_pressed(3)
+                x, y = int((xPos - 150) // Globals.CASE_SIZE), int((yPos - 50) // Globals.CASE_SIZE)
+                if click[0]:
+                    Globals.GRID.case_press(x, y)
+                elif click[2]:
+                    Globals.GRID.case_press_flag(x, y)
 
+        screen.fill(Colors.BG)
         Globals.GRID.draw(screen)
         pygame.display.flip()
 
@@ -226,7 +239,7 @@ def main():
 if __name__ == "__main__":
     argv = sys.argv[1:]  # Éviter le python et nom du programme
     if '--help' in argv:
-        print("[-] Usage: python main.py [--help] [--debug] [[GRID_SIZE] [nb_de_bombdes]]")
+        print("[-] Usage: python main.py [--help] [--debug] [[GRID_SIZE] [nb_de_bombes]]")
         exit(0)
     if '--debug' in argv:
         del argv[argv.index("--debug")]
@@ -235,6 +248,6 @@ if __name__ == "__main__":
         Globals.GRID_SIZE = int(argv[0])
         Globals.BOMBES = int(argv[1])
     elif 1 <= len(argv):
-        print("[-] Usage: python main.py [--help] [--debug] [[GRID_SIZE] [nb_de_bombdes]]")
+        print("[-] Usage: python main.py [--help] [--debug] [[GRID_SIZE] [nb_de_bombes]]")
         print(f"\t\\Default: Size={Globals.GRID_SIZE}, bombes={Globals.BOMBES}")
     main()
