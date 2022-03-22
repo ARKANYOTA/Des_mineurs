@@ -104,6 +104,15 @@ class Grid:
             return
         self.grid[x][y].is_flag = True
 
+    def __repr__(self):
+        textout = ""
+        for row in self.grid:
+            for case in row:
+                textout += f'{case} '
+            textout += "\n"
+        return textout
+
+
 
 class Case:
     def __init__(self, grille, screen_pos=0, grid_pos=0):
@@ -116,13 +125,35 @@ class Case:
         self.grille = grille
         self.is_flag = False
 
+    def __repr__(self):
+        if os.name == 'posix':
+            if self.is_discovered:
+                if self.is_bombe:
+                    return "\033[32m\u2622\033[0m"
+                if self.nb_bombes == 0:
+                    return " "
+                return f'\033[34m{self.nb_bombes}\033[0m'
+            if self.is_flag:
+                return "\033[33m\u2691\033[0m"
+            return "\033[31m\u25A1\033[0m"
+        else:
+            if self.is_discovered:
+                if self.is_bombe:
+                    return "\u2622"
+                if self.nb_bombes == 0:
+                    return " "
+                return str(self.nb_bombes)
+            if self.is_flag:
+                return "\u2691"
+            return "\u25A1"
+
 
 class Globals:
     # STATICS
     GRID_SIZE = 50
     ISIZE = WIDTH, HEIGHT = 900, 700
     CASE_SIZE = 600 / GRID_SIZE
-    BOMBES = min(1000, (GRID_SIZE ** 2) - 9)
+    BOMBES = min(200, (GRID_SIZE ** 2) - 9)
     GRID = Grid(GRID_SIZE, BOMBES)
     debug = False
 
@@ -148,6 +179,7 @@ def main():
     pygame.init()
     screen = pygame.display.set_mode(Globals.ISIZE)
     Globals.GRID.start(49 // 2, 49 // 2)
+    print(Globals.GRID)
     while Globals.run:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
