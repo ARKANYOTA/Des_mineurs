@@ -12,6 +12,7 @@
 import random
 import sys
 import os
+sys.setrecursionlimit(3000)
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
@@ -22,7 +23,7 @@ import pygame
 #############
 class Grid:
     def __init__(self, size: int, bombes: int):
-        self.grid = [[None for _ in range(size)] for _ in range(size)]
+        self.grid = [[Case(self) for _ in range(size)] for _ in range(size)]
         self.group = pygame.sprite.Group()
         self.bombes = bombes
         self.size = size
@@ -57,12 +58,12 @@ class Grid:
                     b = False
         return self.finished or b
 
-    def count_nb_de_voisins_bombes(self, x, y):
+    def count_nb_de_voisins_bombes(self, y, x):
         voisins_bombes = 0
         for i in range(3):
             for j in range(3):
                 if self.size > y + i and 0 <= y + i - 1 and self.size > x + j and 0 <= x + j - 1:
-                    voisins_bombes += self.grid[y + (i - 1)][x + (j - 1)].is_bombe
+                    voisins_bombes += int(self.grid[y + (i - 1)][x + (j - 1)].is_bombe)
         return voisins_bombes
 
     def case_press(self, x, y):
@@ -73,18 +74,21 @@ class Grid:
             self.finished = True
             print("Vous avez perdu")
             return
+        self.grid[x][y].is_discovered = True
         nb_de_bombdes_autour = self.count_nb_de_voisins_bombes(x, y)
+        self.grid[x][y].nb_bombes = nb_de_bombdes_autour
         if nb_de_bombdes_autour == 0:
+            print(nb_de_bombdes_autour)
             for i in range(3):
                 for j in range(3):
                     if self.size > y + i and 0 <= y + i - 1 and self.size > x + j and 0 <= x + j - 1:
-                        self.case_press(y + (i - 1), x + (j - 1))
+                        if not self.grid[x][y].is_discovered:
+                            self.case_press(x + (j - 1), y + (i - 1))
 
-        self.grid[x][y].nb_bombes = nb_de_bombdes_autour
 
 
 class Case:
-    def __init__(self, screen_pos, grid_pos, grille):
+    def __init__(self, grille, screen_pos=0, grid_pos=0):
         self.screen_pos = screen_pos
         self.grid_pos = grid_pos
         self.is_discovered = False
@@ -92,6 +96,7 @@ class Case:
         self.nb_bombes = 0
         self.sprite = None
         self.grille = grille
+        self.is_flag = False
 
 
 class Globals:
@@ -99,7 +104,7 @@ class Globals:
     GRID_SIZE = 50
     ISIZE = WIDTH, HEIGHT = 900, 700
     CASE_SIZE = 600 / GRID_SIZE
-    BOMBES = 5
+    BOMBES = 200
     GRID = Grid(GRID_SIZE, BOMBES)
     debug = False
 
@@ -124,7 +129,8 @@ class Pygame:
 def main():
     pygame.init()
     screen = pygame.display.set_mode(Globals.ISIZE)
-
+    Globals.GRID.start(5,5)
+    Globals.GRID.case_press(40,45)
     while Globals.run:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -134,6 +140,24 @@ def main():
         rect = pygame.rect.Rect(150, 50, 600, 600)
         pygame.draw.rect(screen, Colors.BLACK, rect)
 
+
+        y, yi = 0, 0
+        for lines in Globals.GRID.grid:
+            x, xi = 0, 0
+            for elt in lines:
+                if elt.is_bombe:
+                    img = Pygame.image('mine', (Globals.CASE_SIZE, Globals.CASE_SIZE))
+                elif elt.is_discovered:
+                    img = Pygame.image(f'cell-{elt.nb_bombes}', (Globals.CASE_SIZE, Globals.CASE_SIZE))
+                else:
+                    img = Pygame.image('cell-covered', (Globals.CASE_SIZE, Globals.CASE_SIZE))
+                screen.blit(img, (150 + x, 50 + y))
+                x += Globals.CASE_SIZE
+                xi += 1
+            y += Globals.CASE_SIZE
+            yi += 1
+
+        """
         y, yi = 0, 0
         while y < 600:
             x, xi = 0, 0
@@ -144,6 +168,7 @@ def main():
                 xi += 1
             y += Globals.CASE_SIZE
             yi += 1
+        """
         pygame.display.flip()
 
 
