@@ -13,6 +13,12 @@ import random
 
 import pygame
 import sys
+import os
+
+sys.setrecursionlimit(10000)
+
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+import pygame
 
 
 #############
@@ -62,11 +68,13 @@ class Grid(pygame.sprite.Group):
     def start(self, x: int, y: int):
         rnd_grid = [[random.random() for _ in range(self.size)] for _ in range(self.size)]
 
+        # éviter de tomber direct sur une bombe et d'avoir des bombes juste a coté
         for i in range(3):
             for j in range(3):
-                if self.size > y + i and 0 <= y + i - 1 and self.size > x + j and 0 <= x + j - 1:
+                if self.size >= y + i and 0 <= y + i - 1 and self.size >= x + j and 0 <= x + j - 1:
                     rnd_grid[y + (i - 1)][x + (j - 1)] = 0
 
+        # Récupère les self.bombes plus grandes valeurs pour les mettre dans la grille
         for bombe in range(self.bombes):
             m = 0
             coords = ()
@@ -78,6 +86,8 @@ class Grid(pygame.sprite.Group):
             self.grid[coords[1]][coords[0]].is_bombe = True
             rnd_grid[coords[1]][coords[0]] = 0
 
+        self.case_press(x, y)
+
     def is_finished(self):
         b = True
         for row in self.grid:
@@ -85,6 +95,58 @@ class Grid(pygame.sprite.Group):
                 if not case.is_discovered:
                     b = False
         return self.finished or b
+
+    def count_nb_de_voisins_bombes(self, y, x):
+        voisins_bombes = 0
+        for i in range(3):
+            for j in range(3):
+                if self.size >= y + i and 0 <= y + i - 1 and self.size >= x + j and 0 <= x + j - 1:
+                    voisins_bombes += int(self.grid[y + (i - 1)][x + (j - 1)].is_bombe)  # Ajoute 1 si bombe, sinon 0
+
+        return voisins_bombes
+
+    def case_press(self, x, y):
+        if self.grid[x][y].is_flag:
+            print("Enlever le drapeau avant de découvrir la case")
+            return
+        if self.grid[x][y].is_discovered:
+            print("Case déjà découverte, Rejouez")
+            return
+        if self.grid[x][y].is_bombe:
+            self.finished = True
+            print("Vous avez perdu, Dommage")
+            return
+        self.grid[x][y].is_discovered = True
+        nb_de_bombdes_autour = self.count_nb_de_voisins_bombes(x, y)
+        self.grid[x][y].nb_bombes = nb_de_bombdes_autour
+        if nb_de_bombdes_autour == 0:
+            for i in range(3):
+                for j in range(3):
+                    if self.size >= y + i and 0 <= y + i - 1 and self.size >= x + j and 0 <= x + j - 1:
+                        if not self.grid[x + (j - 1)][y + (i - 1)].is_discovered:
+                            self.case_press(x + (j - 1), y + (i - 1))
+
+    def case_press_flag(self, x, y):
+        if self.grid[x][y].is_flag:
+            self.grid[x][y].is_flag = False
+            return
+        if self.grid[x][y].is_discovered:
+            print("Case déjà découverte, Pourquoi mettre un drapeau ?")
+            return
+        if self.grid[x][y].is_bombe:
+            print(f"Ce message ne devrait jamais apparaitre "
+                  f"mais sinon ça sert à rien de mettre un drapeau sur une bombe")
+            return
+        self.grid[x][y].is_flag = True
+
+    def __repr__(self):
+        textout = ""
+        for row in self.grid:
+            for case in row:
+                textout += f'{case} '
+            textout += "\n"
+        return textout
+
 
 
 class Case(pygame.sprite.DirtySprite):
@@ -98,6 +160,43 @@ class Case(pygame.sprite.DirtySprite):
         self.nb_bombes = 0
         self.sprite = None
         self.grille = grille
+        self.is_flag = False
+
+    def __repr__(self):
+        if os.name == 'posix':
+            if self.is_discovered:
+                if self.is_bombe:
+                    return "\033[32m\u2622\033[0m"
+                if self.nb_bombes == 0:
+                    return " "
+                return f'\033[34m{self.nb_bombes}\033[0m'
+            if self.is_flag:
+                return "\033[33m\u2691\033[0m"
+            return "\033[31m\u25A1\033[0m"
+        else:
+            if self.is_discovered:
+                if self.is_bombe:
+                    return "\u2622"
+                if self.nb_bombes == 0:
+                    return " "
+                return str(self.nb_bombes)
+            if self.is_flag:
+                return "\u2691"
+            return "\u25A1"
+
+
+class Globals:
+    # STATICS
+    GRID_SIZE = 50
+    ISIZE = WIDTH, HEIGHT = 900, 700
+    CASE_SIZE = 600 / GRID_SIZE
+    BOMBES = min(200, (GRID_SIZE ** 2) - 9)
+    GRID = Grid(GRID_SIZE, BOMBES)
+    debug = False
+
+    # GLOBAL VARIABLES
+    run = True
+
         self.rect = self.image.get_rect()
 
         self.rect.x = self.screen_pos[0]
@@ -125,8 +224,17 @@ def main():
 # LANCEMENT #
 #############
 if __name__ == "__main__":
-    argv = sys.argv[2:]  # Eviter le python et nom du programe
-    if 1 <= len(argv) <= 2:
-        Globals.grid_size = int(argv[0])
-        Globals.bombes = int(argv[1])
+    argv = sys.argv[1:]  # Éviter le python et nom du programme
+    if '--help' in argv:
+        print("[-] Usage: python main.py [--help] [--debug] [[GRID_SIZE] [nb_de_bombdes]]")
+        exit(0)
+    if '--debug' in argv:
+        del argv[argv.index("--debug")]
+        Globals.debug = True
+    if 2 <= len(argv):
+        Globals.GRID_SIZE = int(argv[0])
+        Globals.BOMBES = int(argv[1])
+    elif 1 <= len(argv):
+        print("[-] Usage: python main.py [--help] [--debug] [[GRID_SIZE] [nb_de_bombdes]]")
+        print(f"\t\\Default: Size={Globals.GRID_SIZE}, bombes={Globals.BOMBES}")
     main()
