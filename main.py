@@ -71,23 +71,38 @@ class Grid:
         return voisins_bombes
 
     def case_press(self, x, y):
+        if self.grid[x][y].is_flag:
+            print("Enlever le drapeau avant de découvrir la case")
+            return
         if self.grid[x][y].is_discovered:
             print("Case déjà découverte, Rejouez")
             return
         if self.grid[x][y].is_bombe:
             self.finished = True
-            print("Vous avez perdu")
+            print("Vous avez perdu, Dommage")
             return
         self.grid[x][y].is_discovered = True
         nb_de_bombdes_autour = self.count_nb_de_voisins_bombes(x, y)
         self.grid[x][y].nb_bombes = nb_de_bombdes_autour
         if nb_de_bombdes_autour == 0:
-            print(nb_de_bombdes_autour)
             for i in range(3):
                 for j in range(3):
                     if self.size >= y + i and 0 <= y + i - 1 and self.size >= x + j and 0 <= x + j - 1:
                         if not self.grid[x + (j - 1)][y + (i - 1)].is_discovered:
                             self.case_press(x + (j - 1), y + (i - 1))
+
+    def case_press_flag(self, x, y):
+        if self.grid[x][y].is_flag:
+            self.grid[x][y].is_flag = False
+            return
+        if self.grid[x][y].is_discovered:
+            print("Case déjà découverte, Pourquoi mettre un drapeau ?")
+            return
+        if self.grid[x][y].is_bombe:
+            print(f"Ce message ne devrait jamais apparaitre "
+                  f"mais sinon ça sert à rien de mettre un drapeau sur une bombe")
+            return
+        self.grid[x][y].is_flag = True
 
 
 class Case:
@@ -107,7 +122,7 @@ class Globals:
     GRID_SIZE = 50
     ISIZE = WIDTH, HEIGHT = 900, 700
     CASE_SIZE = 600 / GRID_SIZE
-    BOMBES = 2000
+    BOMBES = min(1000, (GRID_SIZE ** 2) - 9)
     GRID = Grid(GRID_SIZE, BOMBES)
     debug = False
 
@@ -132,7 +147,7 @@ class Pygame:
 def main():
     pygame.init()
     screen = pygame.display.set_mode(Globals.ISIZE)
-    Globals.GRID.start(49//2, 49//2)
+    Globals.GRID.start(49 // 2, 49 // 2)
     while Globals.run:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
