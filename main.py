@@ -45,11 +45,24 @@ class Colors:
 def image(name: str, size: tuple):
     return pygame.transform.scale(pygame.image.load(f'./ressources/normal/{name}.png'), size)
 
+
 class Images:
-    COVERED = image('cell-covered', (Globals.CASE_SIZE, Globals.CASE_SIZE))
-    FLAGGED = image('cell-flagged', (Globals.CASE_SIZE, Globals.CASE_SIZE))
-    MINE = image('mine', (Globals.CASE_SIZE, Globals.CASE_SIZE))
-    MINE_EXPLODE = image('mine-exploded', (Globals.CASE_SIZE, Globals.CASE_SIZE))
+
+    @staticmethod
+    def getCovered():
+        return image('cell-covered', (Globals.CASE_SIZE, Globals.CASE_SIZE))
+
+    @staticmethod
+    def getFlagged():
+        return image('cell-flagged', (Globals.CASE_SIZE, Globals.CASE_SIZE))
+
+    @staticmethod
+    def getMine():
+        return image('mine', (Globals.CASE_SIZE, Globals.CASE_SIZE))
+
+    @staticmethod
+    def getMineExploded():
+        return image('mine-exploded', (Globals.CASE_SIZE, Globals.CASE_SIZE))
 
     @staticmethod
     def getCell(bombes: int):
@@ -134,9 +147,9 @@ class Grid(pygame.sprite.Group):
                 self.finished = True
                 case.is_discovered = True
                 self.exploded = True
-                case.image = Images.MINE_EXPLODE
+                case.image = Images.getMineExploded()
                 for coord in self.bombes_list:
-                    self.grid[coord[1]][coord[0]].image = Images.MINE_EXPLODE
+                    self.grid[coord[1]][coord[0]].image = Images.getMineExploded()
                 # print("Vous avez perdu, Dommage")
                 return
             case.is_discovered = True
@@ -155,13 +168,13 @@ class Grid(pygame.sprite.Group):
             case = self.grid[y][x]
             if case.is_flag:
                 case.is_flag = False
-                case.image = Images.COVERED
+                case.image = Images.getCovered()
                 return
             if case.is_discovered:
                 # print("Case déjà découverte, Pourquoi mettre un drapeau ?")
                 return
             case.is_flag = True
-            case.image = Images.FLAGGED
+            case.image = Images.getFlagged()
 
     def __repr__(self):
         textout = ""
