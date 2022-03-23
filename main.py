@@ -29,17 +29,18 @@ class Globals:
     GRID_SIZE = 20
     ISIZE = WIDTH, HEIGHT = 900, 700
     CASE_SIZE = 600 / GRID_SIZE
-    BOMBES = 50
+    BOMBES = 120
     GRID = None
 
     # GLOBAL VARIABLES
     run = True
+    menu = 0
 
 
 class Colors:
     BLACK = pygame.Color(0, 0, 0)
     WHITE = pygame.Color(255, 255, 255)
-    BG = pygame.Color(189, 189, 189)
+    BG = pygame.Color(200, 200, 200)
 
 
 def image(name: str, size: tuple):
@@ -164,7 +165,7 @@ class Grid(pygame.sprite.Group):
                                 self.case_press(x + (j - 1), y + (i - 1))
 
     def case_press_flag(self, x, y):
-        if not self.is_finished():
+        if 0 <= x < Globals.GRID_SIZE and 0 <= y < Globals.GRID_SIZE and not self.is_finished() and self.started:
             case = self.grid[y][x]
             if case.is_flag:
                 case.is_flag = False
@@ -232,12 +233,17 @@ def main():
     pygame.init()
     screen = pygame.display.set_mode(Globals.ISIZE)
     Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
-
+    menus = []
+    prev_menu = 0
     while Globals.run:
+        if prev_menu != Globals.menu:
+            menus[menu] # qqch odk
+            prev_menu = Globals.menu
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 Globals.run = False
-            elif event.type == pygame.MOUSEBUTTONDOWN:
+            elif event.type == pygame.MOUSEBUTTONDOWN and Globals.menu == 0:
                 xPos, yPos = pygame.mouse.get_pos()
                 click = pygame.mouse.get_pressed(3)
                 x, y = int((xPos - 150) // Globals.CASE_SIZE), int((yPos - 50) // Globals.CASE_SIZE)
