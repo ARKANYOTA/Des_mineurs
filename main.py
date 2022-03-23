@@ -62,7 +62,9 @@ class Grid(pygame.sprite.Group):
         self.bombes = bombes
         self.size = size
         self.finished = False
+        self.exploded = False
         self.started = False
+        self.bombes_list = []
 
         self.grid = []
         y, yi = 0, 0
@@ -98,7 +100,7 @@ class Grid(pygame.sprite.Group):
                     coords = (rnd_grid[i].index(M), i)
             self.grid[coords[1]][coords[0]].is_bombe = True
             rnd_grid[coords[1]][coords[0]] = 0
-
+            self.bombes_list.append(coords)
         self.case_press(x, y)
 
     def is_finished(self):
@@ -118,11 +120,10 @@ class Grid(pygame.sprite.Group):
         return voisins_bombes
 
     def case_press(self, x, y):
-        if 0 <= x < Globals.GRID_SIZE and 0 <= y < Globals.GRID_SIZE:
+        if 0 <= x < Globals.GRID_SIZE and 0 <= y < Globals.GRID_SIZE and not self.is_finished():
             case = self.grid[y][x]
             if not self.started:
                 self.start(x, y)  # placer les bombes sur le terrain
-
             if case.is_flag:
                 # print("Enlever le drapeau avant de découvrir la case")
                 return
@@ -132,7 +133,10 @@ class Grid(pygame.sprite.Group):
             if case.is_bombe:
                 self.finished = True
                 case.is_discovered = True
+                self.exploded = True
                 case.image = Images.MINE_EXPLODE
+                for coord in self.bombes_list:
+                    self.grid[coord[1]][coord[0]].image = Images.MINE_EXPLODE
                 # print("Vous avez perdu, Dommage")
                 return
             case.is_discovered = True
@@ -147,16 +151,17 @@ class Grid(pygame.sprite.Group):
                                 self.case_press(x + (j - 1), y + (i - 1))
 
     def case_press_flag(self, x, y):
-        case = self.grid[y][x]
-        if case.is_flag:
-            case.is_flag = False
-            case.image = Images.COVERED
-            return
-        if case.is_discovered:
-            # print("Case déjà découverte, Pourquoi mettre un drapeau ?")
-            return
-        case.is_flag = True
-        case.image = Images.FLAGGED
+        if not self.is_finished():
+            case = self.grid[y][x]
+            if case.is_flag:
+                case.is_flag = False
+                case.image = Images.COVERED
+                return
+            if case.is_discovered:
+                # print("Case déjà découverte, Pourquoi mettre un drapeau ?")
+                return
+            case.is_flag = True
+            case.image = Images.FLAGGED
 
     def __repr__(self):
         textout = ""
@@ -231,6 +236,7 @@ def main():
         screen.fill(Colors.BG)
         Globals.GRID.draw(screen)
         pygame.display.flip()
+        pygame.time.wait(50)
 
 
 #############
