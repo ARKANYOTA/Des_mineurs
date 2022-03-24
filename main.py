@@ -11,12 +11,10 @@
 #############
 import random
 
-import pygame
 import sys
 import os
 
 sys.setrecursionlimit(10000)
-
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
 
@@ -24,6 +22,11 @@ import pygame
 #############
 #  CLASSES  #
 #############
+class Menu:
+    def __init__(self, sprites):
+        self.sprites = sprites
+
+
 class Globals:
     # STATICS
     GRID_SIZE = 20
@@ -44,6 +47,7 @@ class Colors:
 
 def image(name: str, size: tuple):
     return pygame.transform.scale(pygame.image.load(f'./ressources/normal/{name}.png'), size)
+
 
 class Images:
     COVERED = image('cell-covered', (Globals.CASE_SIZE, Globals.CASE_SIZE))
@@ -119,12 +123,12 @@ class Grid(pygame.sprite.Group):
                     voisins_bombes += int(self.grid[y + (i - 1)][x + (j - 1)].is_bombe)  # Ajoute 1 si bombe, sinon 0
         return voisins_bombes
 
-    def case_press(self, x, y):
+    def case_press(self, x, y, bymachine=False):
         if 0 <= x < Globals.GRID_SIZE and 0 <= y < Globals.GRID_SIZE and not self.is_finished():
             case = self.grid[y][x]
             if not self.started:
                 self.start(x, y)  # placer les bombes sur le terrain
-            if case.is_flag:
+            if case.is_flag and not bymachine:
                 # print("Enlever le drapeau avant de découvrir la case")
                 return
             if case.is_discovered:
@@ -139,16 +143,17 @@ class Grid(pygame.sprite.Group):
                     self.grid[coord[1]][coord[0]].image = Images.MINE_EXPLODE
                 # print("Vous avez perdu, Dommage")
                 return
-            case.is_discovered = True
+            # case.is_discovered = True
             nb_bombes = self.count_near_bombes(x, y)
             case.nb_bombes = nb_bombes
             case.image = Images.getCell(nb_bombes)
             if nb_bombes == 0:
-                for i in range(3):
-                    for j in range(3):
-                        if self.size >= y + i and 0 <= y + i - 1 and self.size >= x + j and 0 <= x + j - 1:
-                            if not self.grid[y + (i - 1)][x + (j - 1)].is_discovered:
-                                self.case_press(x + (j - 1), y + (i - 1))
+                self.flood_fill(x, y)
+                # for i in range(3):
+                #     for j in range(3):
+                #         if self.size >= y + i and 0 <= y + i - 1 and self.size >= x + j and 0 <= x + j - 1:
+                #             if not self.grid[y + (i - 1)][x + (j - 1)].is_discovered:
+                #                 self.case_press(x + (j - 1), y + (i - 1), bymachine=True)
 
     def case_press_flag(self, x, y):
         if not self.is_finished():
@@ -162,6 +167,60 @@ class Grid(pygame.sprite.Group):
                 return
             case.is_flag = True
             case.image = Images.FLAGGED
+
+    def inside(self, x, y):
+        return 0 <= y < self.size and 0 <= x < self.size
+
+    def flood_fill(self, x, y):
+        """
+        Flood-fill (node):
+          1. Set Q to the empty queue or stack.
+          2. Add node to the end of Q.
+          3. While Q is not empty:
+          4.   Set n equal to the first element of Q.
+          5.   Remove first element from Q.
+          6.   If n is Inside:
+                 Set the n
+                 Add the node to the west of n to the end of Q.
+                 Add the node to the east of n to the end of Q.
+                 Add the node to the north of n to the end of Q.
+                 Add the node to the south of n to the end of Q.
+          7. Continue looping until Q is exhausted.
+          8. Return.
+        """
+        Q = []  # Queue
+        Q.append((x, y))
+        while len(Q) != 0:
+            print(Q)
+            x, y = Q.pop(0)
+            case = self.grid[y][x]
+            if self.inside(x, y) and not case.is_discovered:
+                case.is_discovered = True
+                print("case", x, y)
+                nb_bombes = self.count_near_bombes(x, y)
+                case.nb_bombes = nb_bombes
+                case.image = Images.getCell(nb_bombes)
+                if nb_bombes == 0:
+                    for i in range(-1, 2):
+                        for j in range(-1, 2):
+                            if not (j == 0 and i == 0):
+                                if self.inside(x + i, y + j) and (not self.grid[y + j][x + i].is_discovered):
+                                    Q.append((x + i, y + j))
+
+                #  if (not self.grid[x + 1][y].is_discovered) and self.inside(x + 1, y):
+                #      Q.append((x + 1, y))
+                #  if (not self.grid[x][y-1].is_discovered) and self.inside(x, y-1):
+                #      Q.append((x, y-1))
+                #  if (not self.grid[x][y+1].is_discovered) and self.inside(x, y+1):
+                #      Q.append((x, y+1))
+                #     Q.append((x - 1, y))
+                # if not self.grid[y][x + 1].is_discovered and self.inside(x - 1, y):
+                #     Q.append((x + 1, y))
+                # if not self.grid[y - 1][x].is_discovered and self.inside(x - 1, y):
+                #     Q.append((x, y - 1))
+                # if not self.grid[y + 1][x].is_discovered and self.inside(x - 1, y):
+                #     Q.append((x, y + 1))
+        return
 
     def __repr__(self):
         textout = ""
@@ -252,6 +311,7 @@ if __name__ == "__main__":
         Globals.debug = True
     if 2 <= len(argv):
         Globals.GRID_SIZE = int(argv[0])
+        Globals.CASE_SIZE = 600 // Globals.GRID_SIZE
         Globals.BOMBES = int(argv[1])
     elif 1 <= len(argv):
         print("[-] Usage: python main.py [--help] [--debug] [[GRID_SIZE] [nb_de_bombes]]")
