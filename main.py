@@ -30,8 +30,9 @@ class Menu:
 class Globals:
     # STATICS
     GRID_SIZE = 20
+    GRID_WIDTH_OR_HEIGHT = 600
     ISIZE = WIDTH, HEIGHT = 900, 700
-    CASE_SIZE = 600 / GRID_SIZE
+    CASE_SIZE = GRID_WIDTH_OR_HEIGHT / GRID_SIZE
     BOMBES = 120
     GRID = None
 
@@ -85,10 +86,10 @@ class Grid(pygame.sprite.Group):
 
         self.grid = []
         y, yi = 0, 0
-        while y < 600:
+        while y < Globals.GRID_WIDTH_OR_HEIGHT:
             self.grid.append([])
             x, xi = 0, 0
-            while x < 600:
+            while x < Globals.GRID_WIDTH_OR_HEIGHT:
                 img = image('cell-covered', (Globals.CASE_SIZE, Globals.CASE_SIZE))
                 self.grid[yi].append(Case(img, (150 + x, 50 + y), (xi, yi), self))
                 x += Globals.CASE_SIZE
@@ -204,12 +205,10 @@ class Grid(pygame.sprite.Group):
         Q = []  # Queue
         Q.append((x, y))
         while len(Q) != 0:
-            print(Q)
             x, y = Q.pop(0)
             case = self.grid[y][x]
             if self.inside(x, y) and not case.is_discovered:
                 case.is_discovered = True
-                print("case", x, y)
                 nb_bombes = self.count_near_bombes(x, y)
                 case.nb_bombes = nb_bombes
                 case.image = Images.getCell(nb_bombes)
@@ -329,7 +328,7 @@ if __name__ == "__main__":
         Globals.debug = True
     if 2 <= len(argv):
         Globals.GRID_SIZE = int(argv[0])
-        Globals.CASE_SIZE = 600 // Globals.GRID_SIZE
+        Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT // Globals.GRID_SIZE
         Globals.BOMBES = int(argv[1])
     elif 1 <= len(argv):
         print("[-] Usage: python main.py [--help] [--debug] [[GRID_SIZE] [nb_de_bombes]]")
