@@ -26,10 +26,10 @@ import pygame
 #############
 class Globals:
     # STATICS
-    GRID_SIZE = 20
+    GRID_SIZE = 50
     ISIZE = WIDTH, HEIGHT = 900, 700
     CASE_SIZE = 600 / GRID_SIZE
-    BOMBES = 120
+    BOMBES = 100
     GRID = None
 
     # GLOBAL VARIABLES
@@ -40,11 +40,20 @@ class Globals:
 class Colors:
     BLACK = pygame.Color(0, 0, 0)
     WHITE = pygame.Color(255, 255, 255)
+    RED = pygame.Color(255, 0, 0)
+    GREEN = pygame.Color(0, 255, 0)
+    BLUE = pygame.Color(0, 0, 255)
     BG = pygame.Color(200, 200, 200)
 
 
+class Fonts:
+    _ = pygame.font.init()
+    TITLE = pygame.font.SysFont('calibri', 64, True, False)
+    BUTTON = pygame.font.SysFont('calibri', 50, True, False)
+
+
 def image(name: str, size: tuple):
-    return pygame.transform.scale(pygame.image.load(f'./ressources/normal/{name}.png'), size)
+    return pygame.transform.scale(pygame.image.load(f'./ressources/{name}.png'), size)
 
 
 class Images:
@@ -66,8 +75,62 @@ class Images:
         return image('mine-exploded', (Globals.CASE_SIZE, Globals.CASE_SIZE))
 
     @staticmethod
+    def getButton():
+        return image('button', (256, 128))
+
+    @staticmethod
     def getCell(bombes: int):
         return image(f'cell-{bombes}', (Globals.CASE_SIZE, Globals.CASE_SIZE))
+
+
+class Sprite(pygame.sprite.DirtySprite):
+    def __init__(self, image: pygame.surface.Surface, pos: tuple):
+        super(Sprite, self).__init__()
+        self.image = image
+        self.rect = image.get_rect()
+        self.rect.x = pos[0]
+        self.rect.y = pos[1]
+
+
+class Button(Sprite):
+    def __init__(self, text: str, pos: tuple):
+        img: pygame.Surface = Images.getButton()
+        txt = Fonts.BUTTON.render(text, False, (100, 100, 100))
+        self.text = text
+
+        x_percent = img.get_size()[0] * 0.8 / txt.get_size()[0]
+        txt = pygame.transform.scale(txt, (int(txt.get_size()[0] * x_percent), int(txt.get_size()[1] * x_percent)))
+
+        if txt.get_size()[1] > img.get_size()[1]:
+            y_percent = (img.get_size()[1] * 0.9) / txt.get_size()[1]
+            txt = pygame.transform.scale(txt, (int(txt.get_size()[0] * y_percent), int(txt.get_size()[1] * y_percent)))
+        img.blit(txt, ((img.get_size()[0]-txt.get_size()[0])/2, (img.get_size()[1]-txt.get_size()[1])/2))
+        super(Button, self).__init__(img, pos)
+
+
+class MainMenu(pygame.sprite.Group):
+    def __init__(self):
+        super(MainMenu, self).__init__()
+        self.bg = Colors.BG
+        title = Sprite(Fonts.TITLE.render('Le Jeu des Mineurs', Colors.BLACK, False), (200, 70))
+        test_button = Button('Jouer', (160, 200))
+        play_button = Button('Challenges', (460, 200))
+        challenge_button = Button('Leaderboard', (160, 400))
+        leaderboard_button = Button('Quitter', (460, 400))
+
+        self.add(title, test_button, play_button, challenge_button, leaderboard_button)
+
+
+class GameMenu(pygame.sprite.Group):
+    def __init__(self):
+        super(GameMenu, self).__init__()
+        self.bg = Colors.WHITE
+        r = pygame.rect.Rect(0, 0, 270, 600)
+        s = pygame.surface.Surface((r.w, r.h))
+        s.fill(Colors.BG)
+        rect = Sprite(s, (620, 90))
+        self.add(rect)
+
 
 
 class Grid(pygame.sprite.Group):
@@ -87,7 +150,7 @@ class Grid(pygame.sprite.Group):
             x, xi = 0, 0
             while x < 600:
                 img = image('cell-covered', (Globals.CASE_SIZE, Globals.CASE_SIZE))
-                self.grid[yi].append(Case(img, (150 + x, 50 + y), (xi, yi), self))
+                self.grid[yi].append(Case(img, (10 + x, 90 + y), (xi, yi), self))
                 x += Globals.CASE_SIZE
                 xi += 1
             y += Globals.CASE_SIZE
@@ -231,29 +294,52 @@ class Case(pygame.sprite.DirtySprite):
 #############
 def main():
     pygame.init()
+    pygame.font.init()
+    
     screen = pygame.display.set_mode(Globals.ISIZE)
     Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
-    menus = []
-    prev_menu = 0
+    
+    menus = [MainMenu(), GameMenu()]
+    prev_menu = Globals.menu
     while Globals.run:
         if prev_menu != Globals.menu:
-            menus[menu] # qqch odk
             prev_menu = Globals.menu
+            if prev_menu == 1:
+                Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 Globals.run = False
-            elif event.type == pygame.MOUSEBUTTONDOWN and Globals.menu == 0:
+            elif event.type == pygame.MOUSEBUTTONDOWN:
                 xPos, yPos = pygame.mouse.get_pos()
                 click = pygame.mouse.get_pressed(3)
-                x, y = int((xPos - 150) // Globals.CASE_SIZE), int((yPos - 50) // Globals.CASE_SIZE)
-                if click[0]:
-                    Globals.GRID.case_press(x, y)
-                elif click[2]:
-                    Globals.GRID.case_press_flag(x, y)
+                if Globals.menu == 1:
+                    x, y = int((xPos - 10) // Globals.CASE_SIZE), int((yPos - 90) // Globals.CASE_SIZE)
+                    if click[0]:
+                        Globals.GRID.case_press(x, y)
+                    elif click[2]:
+                        Globals.GRID.case_press_flag(x, y)
+                for sprite in menus[Globals.menu].sprites():
+                    if isinstance(sprite, Button) and sprite.rect.collidepoint(xPos, yPos) and click[0]:
+                        sprite: Button
+                        if sprite.text == 'Quitter':
+                            Globals.run = False
+                        elif sprite.text == 'Jouer':
+                            Globals.menu = 1
+                            Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
+                        elif sprite.text == 'Challenges':
+                            Globals.menu = 2
+                        elif sprite.text == 'Leaderboard':
+                            Globals.menu = 3
+                        elif sprite.text == 'Home':
+                            Globals.menu = 0
 
-        screen.fill(Colors.BG)
-        Globals.GRID.draw(screen)
+        screen.fill(menus[Globals.menu].bg)
+
+        if Globals.menu == 1:
+            Globals.GRID.draw(screen)
+        menus[Globals.menu].draw(screen)
+
         pygame.display.flip()
         pygame.time.wait(50)
 
