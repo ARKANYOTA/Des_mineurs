@@ -26,11 +26,11 @@ import pygame
 #############
 class Globals:
     # STATICS
-    GRID_SIZE = 20
+    GRID_SIZE = 10
     GRID_WIDTH_OR_HEIGHT = 600
     ISIZE = WIDTH, HEIGHT = 900, 700
     CASE_SIZE = GRID_WIDTH_OR_HEIGHT / GRID_SIZE
-    BOMBES = 120
+    BOMBES = 5
     GRID = None
 
     # GLOBAL VARIABLES
@@ -54,7 +54,7 @@ class Fonts:
 
 
 def image(name: str, size: tuple):
-    return pygame.transform.scale(pygame.image.load(f'./ressources/normal/{name}.png'), size)
+    return pygame.transform.scale(pygame.image.load(f'./ressources/{name}.png'), size)
 
 
 class Images:
@@ -138,6 +138,7 @@ class Grid(pygame.sprite.Group):
     def __init__(self, size: int, bombes: int):
         super().__init__()
         self.bombes = bombes
+        self.flags = 0
         self.size = size
         self.finished = False
         self.exploded = False
@@ -182,12 +183,11 @@ class Grid(pygame.sprite.Group):
         self.case_press(x, y)
 
     def is_finished(self):
-        b = True
         for row in self.grid:
             for case in row:
-                if not case.is_discovered:
-                    b = False
-        return self.finished or b
+                if not (case.is_bombe or case.is_discovered):
+                    return False
+        return self.finished
 
     def count_near_bombes(self, x, y):
         voisins_bombes = 0
@@ -217,30 +217,30 @@ class Grid(pygame.sprite.Group):
                     self.grid[coord[1]][coord[0]].image = Images.getMineExploded()
                 # print("Vous avez perdu, Dommage")
                 return
-            case.is_discovered = True
+            # case.is_discovered = True
             nb_bombes = self.count_near_bombes(x, y)
             case.nb_bombes = nb_bombes
             case.image = Images.getCell(nb_bombes)
             if nb_bombes == 0:
                 self.flood_fill(x, y)
-                # for i in range(3):
-                #     for j in range(3):
-                #         if self.size >= y + i and 0 <= y + i - 1 and self.size >= x + j and 0 <= x + j - 1:
-                #             if not self.grid[y + (i - 1)][x + (j - 1)].is_discovered:
-                #                 self.case_press(x + (j - 1), y + (i - 1), bymachine=True)
+            if self.is_finished():
+                for bombe in self.bombes_list:
+                    bombe.image = Images.getMine()
 
     def case_press_flag(self, x, y):
         if 0 <= x < Globals.GRID_SIZE and 0 <= y < Globals.GRID_SIZE and not self.is_finished() and self.started:
             case = self.grid[y][x]
             if case.is_flag:
+                self.flags -= 1
                 case.is_flag = False
                 case.image = Images.getCovered()
-                return
-            if case.is_discovered:
-                # print("Case déjà découverte, Pourquoi mettre un drapeau ?")
-                return
-            case.is_flag = True
-            case.image = Images.getFlagged()
+            if not case.is_discovered:
+                self.flags += 1
+                case.is_flag = True
+                case.image = Images.getFlagged()
+                if self.is_finished():
+                    for bombe in self.bombes_list:
+                        self.grid[bombe[1]][bombe[0]].image = Images.getMine()
 
     def inside(self, x, y):
         return 0 <= y < self.size and 0 <= x < self.size
@@ -312,7 +312,6 @@ class Case(pygame.sprite.DirtySprite):
         self.is_discovered = False
         self.is_bombe = False
         self.nb_bombes = 0
-        self.sprite = None
         self.grille = grille
         self.is_flag = False
         self.rect = self.image.get_rect()
