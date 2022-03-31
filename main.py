@@ -16,9 +16,7 @@ import sys
 import os
 
 sys.setrecursionlimit(10000)
-
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
-import pygame
 
 
 #############
@@ -129,8 +127,9 @@ class GameMenu(pygame.sprite.Group):
         r = pygame.rect.Rect(0, 0, 270, 600)
         s = pygame.surface.Surface((r.w, r.h))
         s.fill(Colors.BG)
+        title = Sprite(Fonts.TITLE.render('Le Jeu des Mineurs', Colors.BLACK, False), (200, 10))
         rect = Sprite(s, (620, 90))
-        self.add(rect)
+        self.add(rect, title)
 
 
 
@@ -187,7 +186,7 @@ class Grid(pygame.sprite.Group):
             for case in row:
                 if not (case.is_bombe or case.is_discovered):
                     return False
-        return self.finished
+        return True
 
     def count_near_bombes(self, x, y):
         voisins_bombes = 0
@@ -217,30 +216,30 @@ class Grid(pygame.sprite.Group):
                     self.grid[coord[1]][coord[0]].image = Images.getMineExploded()
                 # print("Vous avez perdu, Dommage")
                 return
-            # case.is_discovered = True
-            nb_bombes = self.count_near_bombes(x, y)
-            case.nb_bombes = nb_bombes
-            case.image = Images.getCell(nb_bombes)
-            if nb_bombes == 0:
-                self.flood_fill(x, y)
+            elif not self.finished:
+                # case.is_discovered = True
+                nb_bombes = self.count_near_bombes(x, y)
+                case.nb_bombes = nb_bombes
+                case.image = Images.getCell(nb_bombes)
+                if nb_bombes == 0:
+                    self.flood_fill(x, y)
+                else:
+                    self.grid[y][x].is_discovered = True
             if self.is_finished():
                 for bombe in self.bombes_list:
-                    bombe.image = Images.getMine()
+                    self.grid[bombe[1]][bombe[0]].image = Images.getMine()
 
     def case_press_flag(self, x, y):
-        if 0 <= x < Globals.GRID_SIZE and 0 <= y < Globals.GRID_SIZE and not self.is_finished() and self.started:
+        if 0 <= x < Globals.GRID_SIZE and 0 <= y < Globals.GRID_SIZE and not self.is_finished() and not self.finished and self.started:
             case = self.grid[y][x]
             if case.is_flag:
                 self.flags -= 1
                 case.is_flag = False
                 case.image = Images.getCovered()
-            if not case.is_discovered:
+            elif not case.is_discovered:
                 self.flags += 1
                 case.is_flag = True
                 case.image = Images.getFlagged()
-                if self.is_finished():
-                    for bombe in self.bombes_list:
-                        self.grid[bombe[1]][bombe[0]].image = Images.getMine()
 
     def inside(self, x, y):
         return 0 <= y < self.size and 0 <= x < self.size
