@@ -74,8 +74,8 @@ class Images:
         return image('mine-exploded', (Globals.CASE_SIZE, Globals.CASE_SIZE))
 
     @staticmethod
-    def getButton():
-        return image('button', (256, 128))
+    def getButton(size=(256, 128)):
+        return image('button', size)
 
     @staticmethod
     def getCell(bombes: int):
@@ -92,9 +92,9 @@ class Sprite(pygame.sprite.DirtySprite):
 
 
 class Button(Sprite):
-    def __init__(self, text: str, pos: tuple):
-        img: pygame.Surface = Images.getButton()
-        txt = Fonts.BUTTON.render(text, False, (100, 100, 100))
+    def __init__(self, text: str, pos: tuple, size: tuple=(256, 128), font: pygame.font.Font = Fonts.BUTTON):
+        img: pygame.Surface = Images.getButton(size)
+        txt = font.render(text, False, (100, 100, 100))
         self.text = text
 
         x_percent = img.get_size()[0] * 0.8 / txt.get_size()[0]
@@ -123,13 +123,15 @@ class MainMenu(pygame.sprite.Group):
 class GameMenu(pygame.sprite.Group):
     def __init__(self):
         super(GameMenu, self).__init__()
-        self.bg = Colors.WHITE
+        self.bg = Colors.BG
         r = pygame.rect.Rect(0, 0, 270, 600)
         s = pygame.surface.Surface((r.w, r.h))
-        s.fill(Colors.BG)
+        s.fill(Colors.WHITE)
+
+        quit = Button('Retour', (750, 20), size=(100, 50))
         title = Sprite(Fonts.TITLE.render('Le Jeu des Mineurs', Colors.BLACK, False), (200, 10))
         rect = Sprite(s, (620, 90))
-        self.add(rect, title)
+        self.add(rect, title, quit)
 
 
 
@@ -382,6 +384,8 @@ def main():
                         elif sprite.text == 'Leaderboard':
                             Globals.menu = 3
                         elif sprite.text == 'Home':
+                            Globals.menu = 0
+                        elif sprite.text == 'Retour':
                             Globals.menu = 0
 
         screen.fill(menus[Globals.menu].bg)
