@@ -134,6 +134,21 @@ class GameMenu(pygame.sprite.Group):
         self.add(rect, title, quit)
 
 
+class ChallengeMenu(pygame.sprite.Group):
+    def __init__(self):
+        super(ChallengeMenu, self).__init__()
+        self.bg = Colors.BG
+
+        quit = Button('Retour', (750, 20), size=(100, 50))
+        title = Sprite(Fonts.TITLE.render('Le Jeu des Mineurs', Colors.BLACK, False), (200, 10))
+
+        facile = Button('Facile', (160, 200))
+        normal = Button('Normal', (460, 200))
+        difficile = Button('Difficile', (160, 400))
+        impossible = Button('Impossible', (460, 400))
+
+        self.add(quit, title, facile, normal, difficile, impossible)
+
 
 class Grid(pygame.sprite.Group):
     def __init__(self, size: int, bombes: int):
@@ -279,20 +294,6 @@ class Grid(pygame.sprite.Group):
                             if not (j == 0 and i == 0):
                                 if self.inside(x + i, y + j) and (not self.grid[y + j][x + i].is_discovered):
                                     Q.append((x + i, y + j))
-
-                #  if (not self.grid[x + 1][y].is_discovered) and self.inside(x + 1, y):
-                #      Q.append((x + 1, y))
-                #  if (not self.grid[x][y-1].is_discovered) and self.inside(x, y-1):
-                #      Q.append((x, y-1))
-                #  if (not self.grid[x][y+1].is_discovered) and self.inside(x, y+1):
-                #      Q.append((x, y+1))
-                #     Q.append((x - 1, y))
-                # if not self.grid[y][x + 1].is_discovered and self.inside(x - 1, y):
-                #     Q.append((x + 1, y))
-                # if not self.grid[y - 1][x].is_discovered and self.inside(x - 1, y):
-                #     Q.append((x, y - 1))
-                # if not self.grid[y + 1][x].is_discovered and self.inside(x - 1, y):
-                #     Q.append((x, y + 1))
         return
 
     def __repr__(self):
@@ -351,7 +352,7 @@ def main():
     screen = pygame.display.set_mode(Globals.ISIZE)
     Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
 
-    menus = [MainMenu(), GameMenu()]
+    menus = [MainMenu(), GameMenu(), ChallengeMenu()]
     prev_menu = Globals.menu
     while Globals.run:
         if prev_menu != Globals.menu:
@@ -383,10 +384,32 @@ def main():
                             Globals.menu = 2
                         elif sprite.text == 'Leaderboard':
                             Globals.menu = 3
-                        elif sprite.text == 'Home':
-                            Globals.menu = 0
                         elif sprite.text == 'Retour':
                             Globals.menu = 0
+                        elif sprite.text == 'Facile':
+                            Globals.GRID_SIZE = 10
+                            Globals.BOMBES = 15
+                            Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT // Globals.GRID_SIZE
+                            Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
+                            Globals.menu = 1
+                        elif sprite.text == 'Normal':
+                            Globals.GRID_SIZE = 20
+                            Globals.BOMBES = 60
+                            Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT // Globals.GRID_SIZE
+                            Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
+                            Globals.menu = 1
+                        elif sprite.text == 'Difficile':
+                            Globals.GRID_SIZE = 30
+                            Globals.BOMBES = 150
+                            Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT // Globals.GRID_SIZE
+                            Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
+                            Globals.menu = 1
+                        elif sprite.text == 'Impossible':
+                            Globals.GRID_SIZE = 40
+                            Globals.BOMBES = 300
+                            Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT // Globals.GRID_SIZE
+                            Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
+                            Globals.menu = 1
 
         screen.fill(menus[Globals.menu].bg)
 
