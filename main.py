@@ -24,7 +24,7 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 #############
 class Globals:
     # STATICS
-    GRID_SIZE = 10
+    GRID_SIZE = 12
     GRID_WIDTH_OR_HEIGHT = 600
     ISIZE = WIDTH, HEIGHT = 900, 700
     CASE_SIZE = GRID_WIDTH_OR_HEIGHT / GRID_SIZE
@@ -51,8 +51,8 @@ class Fonts:
     BUTTON = pygame.font.SysFont('calibri', 50, True, False)
 
 
-def image(name: str, size: tuple):
-    return pygame.transform.scale(pygame.image.load(f'./ressources/{name}.png'), size)
+def image(name: str, size: tuple, angle: int =0, x_flip: bool = False, y_flip: bool = False):
+    return pygame.transform.flip(pygame.transform.scale(pygame.transform.rotate(pygame.image.load(f'./ressources/{name}.png'), angle), size), x_flip, y_flip)
 
 
 class Images:
@@ -83,7 +83,7 @@ class Images:
 
 
 class Sprite(pygame.sprite.DirtySprite):
-    def __init__(self, image: pygame.surface.Surface, pos: tuple):
+    def __init__(self, image: pygame.surface.Surface, pos: tuple, name: str=''):
         super(Sprite, self).__init__()
         self.image = image
         self.rect = image.get_rect()
@@ -92,18 +92,20 @@ class Sprite(pygame.sprite.DirtySprite):
 
 
 class Button(Sprite):
-    def __init__(self, text: str, pos: tuple, size: tuple=(256, 128), font: pygame.font.Font = Fonts.BUTTON):
-        img: pygame.Surface = Images.getButton(size)
+    def __init__(self, pos: tuple, text: str='', btn_image='button', size: tuple=(256, 128), angle: int=0, x_flip: bool=False, y_flip: bool=False, font: pygame.font.Font = Fonts.BUTTON):
+        img: pygame.Surface = image(btn_image, size, angle, x_flip, y_flip)
         txt = font.render(text, False, (100, 100, 100))
+        self.image = btn_image
         self.text = text
 
-        x_percent = img.get_size()[0] * 0.8 / txt.get_size()[0]
-        txt = pygame.transform.scale(txt, (int(txt.get_size()[0] * x_percent), int(txt.get_size()[1] * x_percent)))
+        if text != '':
+            x_percent = img.get_size()[0] * 0.8 / txt.get_size()[0]
+            txt = pygame.transform.scale(txt, (int(txt.get_size()[0] * x_percent), int(txt.get_size()[1] * x_percent)))
 
-        if txt.get_size()[1] > img.get_size()[1]:
-            y_percent = (img.get_size()[1] * 0.9) / txt.get_size()[1]
-            txt = pygame.transform.scale(txt, (int(txt.get_size()[0] * y_percent), int(txt.get_size()[1] * y_percent)))
-        img.blit(txt, ((img.get_size()[0]-txt.get_size()[0])/2, (img.get_size()[1]-txt.get_size()[1])/2))
+            if txt.get_size()[1] > img.get_size()[1]:
+                y_percent = (img.get_size()[1] * 0.9) / txt.get_size()[1]
+                txt = pygame.transform.scale(txt, (int(txt.get_size()[0] * y_percent), int(txt.get_size()[1] * y_percent)))
+            img.blit(txt, ((img.get_size()[0] - txt.get_size()[0]) / 2, (img.get_size()[1] - txt.get_size()[1]) / 2))
         super(Button, self).__init__(img, pos)
 
 
@@ -112,23 +114,22 @@ class MainMenu(pygame.sprite.Group):
         super(MainMenu, self).__init__()
         self.bg = Colors.BG
         title = Sprite(Fonts.TITLE.render('Le Jeu des Mineurs', Colors.BLACK, False), (200, 70))
-        test_button = Button('Jouer', (160, 200))
-        play_button = Button('Challenges', (460, 200))
-        challenge_button = Button('Leaderboard', (160, 400))
-        leaderboard_button = Button('Quitter', (460, 400))
+        play_button = Button((160, 200), text='Jouer')
+        challenge_button = Button((460, 200), text='Challenges')
+        leaderboard_button = Button((160, 400), text='Leaderboard')
+        quit_button = Button((460, 400), text='Quitter')
 
-        self.add(title, test_button, play_button, challenge_button, leaderboard_button)
+        self.add(title, play_button, challenge_button, leaderboard_button, quit_button)
 
 
 class GameMenu(pygame.sprite.Group):
     def __init__(self):
         super(GameMenu, self).__init__()
         self.bg = Colors.BG
-        r = pygame.rect.Rect(0, 0, 270, 600)
-        s = pygame.surface.Surface((r.w, r.h))
+        s = pygame.surface.Surface((270, 600))
         s.fill(Colors.WHITE)
 
-        quit = Button('Retour', (750, 20), size=(100, 50))
+        quit = Button((750, 20), text='Retour', size=(100, 50))
         title = Sprite(Fonts.TITLE.render('Le Jeu des Mineurs', Colors.BLACK, False), (200, 10))
         rect = Sprite(s, (620, 90))
         self.add(rect, title, quit)
@@ -139,15 +140,40 @@ class ChallengeMenu(pygame.sprite.Group):
         super(ChallengeMenu, self).__init__()
         self.bg = Colors.BG
 
-        quit = Button('Retour', (750, 20), size=(100, 50))
+        quit = Button((750, 20), text='Retour', size=(100, 50))
         title = Sprite(Fonts.TITLE.render('Le Jeu des Mineurs', Colors.BLACK, False), (200, 10))
 
-        facile = Button('Facile', (160, 200))
-        normal = Button('Normal', (460, 200))
-        difficile = Button('Difficile', (160, 400))
-        impossible = Button('Impossible', (460, 400))
+        facile = Button((160, 200), text='Facile')
+        normal = Button((460, 200), text='Normal')
+        difficile = Button((160, 400), text='Difficile')
+        impossible = Button((460, 400), text='Impossible')
 
         self.add(quit, title, facile, normal, difficile, impossible)
+
+
+class CreationMenu(pygame.sprite.Group):
+    def __init__(self):
+        super(CreationMenu, self).__init__()
+        self.bg = Colors.BG
+
+        quit = Button((750, 20), text='Retour', size=(100, 50))
+        title = Sprite(Fonts.TITLE.render('Le Jeu des Mineurs', Colors.BLACK, False), (200, 10))
+
+        test = Button((360, 600), btn_image='arrow', size=(64, 64))
+        test2 = Button((160, 600), btn_image='arrow', size=(64, 64), x_flip=True)
+
+        self.add(quit, title)
+
+
+class LeaderboardMenu(pygame.sprite.Group):
+    def __init__(self):
+        super(LeaderboardMenu, self).__init__()
+        self.bg = Colors.BG
+
+        quit = Button((750, 20), text='Retour', size=(100, 50))
+        title = Sprite(Fonts.TITLE.render('Le Jeu des Mineurs', Colors.BLACK, False), (200, 10))
+
+        self.add(quit, title)
 
 
 class Grid(pygame.sprite.Group):
@@ -167,7 +193,7 @@ class Grid(pygame.sprite.Group):
             self.grid.append([])
             x, xi = 0, 0
             while x < Globals.GRID_WIDTH_OR_HEIGHT:
-                img = image('cell-covered', (Globals.CASE_SIZE, Globals.CASE_SIZE))
+                img = image('cell-covered', size=(Globals.CASE_SIZE, Globals.CASE_SIZE))
                 self.grid[yi].append(Case(img, (10 + x, 90 + y), (xi, yi), self))
                 x += Globals.CASE_SIZE
                 xi += 1
@@ -352,7 +378,7 @@ def main():
     screen = pygame.display.set_mode(Globals.ISIZE)
     Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
 
-    menus = [MainMenu(), GameMenu(), ChallengeMenu()]
+    menus = [MainMenu(), GameMenu(), ChallengeMenu(), CreationMenu(), LeaderboardMenu()]
     prev_menu = Globals.menu
     while Globals.run:
         if prev_menu != Globals.menu:
@@ -367,7 +393,7 @@ def main():
                 xPos, yPos = pygame.mouse.get_pos()
                 click = pygame.mouse.get_pressed(3)
                 if Globals.menu == 1:
-                    x, y = int((xPos - 10) // Globals.CASE_SIZE), int((yPos - 90) // Globals.CASE_SIZE)
+                    x, y = int((xPos - 10) / Globals.CASE_SIZE), int((yPos - 90) / Globals.CASE_SIZE)
                     if click[0]:
                         Globals.GRID.case_press(x, y)
                     elif click[2]:
@@ -378,36 +404,36 @@ def main():
                         if sprite.text == 'Quitter':
                             Globals.run = False
                         elif sprite.text == 'Jouer':
-                            Globals.menu = 1
+                            Globals.menu = 3
                             Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
                         elif sprite.text == 'Challenges':
                             Globals.menu = 2
                         elif sprite.text == 'Leaderboard':
-                            Globals.menu = 3
+                            Globals.menu = 4
                         elif sprite.text == 'Retour':
                             Globals.menu = 0
                         elif sprite.text == 'Facile':
                             Globals.GRID_SIZE = 10
                             Globals.BOMBES = 15
-                            Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT // Globals.GRID_SIZE
+                            Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT / Globals.GRID_SIZE
                             Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
                             Globals.menu = 1
                         elif sprite.text == 'Normal':
                             Globals.GRID_SIZE = 20
                             Globals.BOMBES = 60
-                            Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT // Globals.GRID_SIZE
+                            Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT / Globals.GRID_SIZE
                             Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
                             Globals.menu = 1
                         elif sprite.text == 'Difficile':
                             Globals.GRID_SIZE = 30
                             Globals.BOMBES = 150
-                            Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT // Globals.GRID_SIZE
+                            Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT / Globals.GRID_SIZE
                             Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
                             Globals.menu = 1
                         elif sprite.text == 'Impossible':
                             Globals.GRID_SIZE = 40
                             Globals.BOMBES = 300
-                            Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT // Globals.GRID_SIZE
+                            Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT / Globals.GRID_SIZE
                             Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
                             Globals.menu = 1
 
@@ -434,7 +460,7 @@ if __name__ == "__main__":
         Globals.debug = True
     if 2 <= len(argv):
         Globals.GRID_SIZE = int(argv[0])
-        Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT // Globals.GRID_SIZE
+        Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT / Globals.GRID_SIZE
         Globals.BOMBES = int(argv[1])
     elif 1 <= len(argv):
         print("[-] Usage: python main.py [--help] [--debug] [[GRID_SIZE] [nb_de_bombes]]")
