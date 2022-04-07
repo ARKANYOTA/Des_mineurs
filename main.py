@@ -92,11 +92,12 @@ class Sprite(pygame.sprite.DirtySprite):
 
 
 class Button(Sprite):
-    def __init__(self, pos: tuple, text: str='', btn_image='button', size: tuple=(256, 128), angle: int=0, x_flip: bool=False, y_flip: bool=False, font: pygame.font.Font = Fonts.BUTTON):
+    def __init__(self, pos: tuple, text: str='', btn_image='button', size: tuple=(256, 128), angle: int=0, x_flip: bool=False, y_flip: bool=False, font: pygame.font.Font = Fonts.BUTTON, name: str=''):
         img: pygame.Surface = image(btn_image, size, angle, x_flip, y_flip)
         txt = font.render(text, False, (100, 100, 100))
         self.image = btn_image
         self.text = text
+        self.name = name
 
         if text != '':
             x_percent = img.get_size()[0] * 0.8 / txt.get_size()[0]
@@ -106,8 +107,15 @@ class Button(Sprite):
                 y_percent = (img.get_size()[1] * 0.9) / txt.get_size()[1]
                 txt = pygame.transform.scale(txt, (int(txt.get_size()[0] * y_percent), int(txt.get_size()[1] * y_percent)))
             img.blit(txt, ((img.get_size()[0] - txt.get_size()[0]) / 2, (img.get_size()[1] - txt.get_size()[1]) / 2))
-        super(Button, self).__init__(img, pos)
+        super(Button, self).__init__(img, pos, name=name)
 
+
+class DynamicSprite(Sprite):
+    def __init__(self, image: pygame.surface.Surface, pos: tuple, name: str=''):
+        super(DynamicSprite, self).__init__(image, pos, name=name)
+
+    def update(self, func: callable):
+        self.image = func()
 
 class MainMenu(pygame.sprite.Group):
     def __init__(self):
@@ -157,12 +165,20 @@ class CreationMenu(pygame.sprite.Group):
         self.bg = Colors.BG
 
         quit = Button((750, 20), text='Retour', size=(100, 50))
+        creation = Button((300, 500), text='Créer la partie', size=(300, 100), name='create')
         title = Sprite(Fonts.TITLE.render('Le Jeu des Mineurs', Colors.BLACK, False), (200, 10))
+        affBombes = Sprite(Fonts.TITLE.render('BOMBES', Colors.BLACK, False), (450, 300))
+        affSize = Sprite(Fonts.TITLE.render('CASES', Colors.BLACK, False), (450, 400))
 
-        test = Button((360, 600), btn_image='arrow', size=(64, 64))
-        test2 = Button((160, 600), btn_image='arrow', size=(64, 64), x_flip=True)
+        addMine = Button((360, 300), btn_image='arrow', size=(64, 64), name='addMine')
+        remMine = Button((160, 300), btn_image='arrow', size=(64, 64), x_flip=True, name='remMine')
+        addSize = Button((360, 400), btn_image='arrow', size=(64, 64), name='addSize')
+        remSize = Button((160, 400), btn_image='arrow', size=(64, 64), x_flip=True, name='remSize')
 
-        self.add(quit, title)
+        bombes = DynamicSprite(Fonts.BUTTON.render(str(Globals.BOMBES), Colors.BLACK, False), (260, 310))
+        size = DynamicSprite(Fonts.BUTTON.render(str(Globals.GRID_SIZE), Colors.BLACK, False), (260, 410))
+
+        self.add(quit, creation, title, addMine, remMine, addSize, remSize, bombes, size, affSize, affBombes)
 
 
 class LeaderboardMenu(pygame.sprite.Group):
@@ -433,6 +449,26 @@ def main():
                         elif sprite.text == 'Impossible':
                             Globals.GRID_SIZE = 40
                             Globals.BOMBES = 300
+                            Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT / Globals.GRID_SIZE
+                            Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
+                            Globals.menu = 1
+                        elif sprite.name == 'addMine':
+                            if Globals.BOMBES < Globals.GRID_SIZE ** 2 // 2:
+                                Globals.BOMBES += 1
+                                menus[3].sprites()[7].update(lambda : Fonts.BUTTON.render(str(Globals.BOMBES), Colors.BLACK, False))
+                        elif sprite.name == 'remMine':
+                            if Globals.BOMBES > 1:
+                                Globals.BOMBES -= 1
+                                menus[3].sprites()[7].update(lambda : Fonts.BUTTON.render(str(Globals.BOMBES), Colors.BLACK, False))
+                        elif sprite.name == 'addSize':
+                            if Globals.GRID_SIZE < 200:
+                                Globals.GRID_SIZE += 1
+                                menus[3].sprites()[8].update(lambda : Fonts.BUTTON.render(str(Globals.GRID_SIZE), Colors.BLACK, False))
+                        elif sprite.name == 'remSize':
+                            if Globals.GRID_SIZE > 5:
+                                Globals.GRID_SIZE -= 1
+                                menus[3].sprites()[8].update(lambda : Fonts.BUTTON.render(str(Globals.GRID_SIZE), Colors.BLACK, False))
+                        elif sprite.name == 'create':
                             Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT / Globals.GRID_SIZE
                             Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
                             Globals.menu = 1
