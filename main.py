@@ -10,6 +10,7 @@
 #  IMPORTS  #
 #############
 import random
+import time
 
 import pygame
 import sys
@@ -30,6 +31,7 @@ class Globals:
     CASE_SIZE = GRID_WIDTH_OR_HEIGHT / GRID_SIZE
     BOMBES = 5
     GRID = None
+    FPS = 30
 
     # GLOBAL VARIABLES
     run = True
@@ -133,7 +135,13 @@ class GameMenu(pygame.sprite.Group):
         quit = Button((750, 20), text='Retour', size=(100, 50))
         title = Sprite(Fonts.TITLE.render('Le Jeu des Mineurs', Colors.BLACK, False), (200, 10))
         rect = Sprite(s, (620, 90))
-        self.add(rect, title, quit)
+
+        time = Sprite(Fonts.TITLE.render('Temps :', Colors.BLACK, False), (630, 150))
+        time_t = Sprite(Fonts.TITLE.render('00:00', Colors.BLACK, False), (640, 220))
+        mines = Sprite(Fonts.TITLE.render('Mines :', Colors.BLACK, False), (630, 320))
+        mines_t = Sprite(Fonts.TITLE.render(str(Globals.BOMBES - Globals.GRID.flags), Colors.BLACK, False), (640, 390))
+
+        self.add(rect, title, quit, time, mines, time_t, mines_t)
 
 
 class ChallengeMenu(pygame.sprite.Group):
@@ -195,6 +203,7 @@ class Grid(pygame.sprite.Group):
         self.exploded = False
         self.started = False
         self.bombes_list = []
+        self.time = 0
 
         self.grid = []
         y, yi = 0, 0
@@ -211,7 +220,9 @@ class Grid(pygame.sprite.Group):
 
     def start(self, x: int, y: int):
         self.started = True
+        self.time = time.time()
         rnd_grid = [[random.random() for _ in range(self.size)] for _ in range(self.size)]
+        Globals.menus[1].sprites()[6].image = Fonts.TITLE.render(str(self.bombes - self.flags), True, Colors.BLACK)
 
         # éviter de tomber direct sur une bombe et d'avoir des bombes juste a coté
         for i in range(3):
@@ -292,6 +303,8 @@ class Grid(pygame.sprite.Group):
                 self.flags += 1
                 case.is_flag = True
                 case.image = Images.getFlagged()
+            else: return
+            Globals.menus[1].sprites()[6].image = Fonts.TITLE.render(str(self.bombes - self.flags), True, Colors.BLACK)
 
     def inside(self, x, y):
         return 0 <= y < self.size and 0 <= x < self.size
@@ -388,6 +401,7 @@ def main():
     Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
 
     menus = [MainMenu(), GameMenu(), ChallengeMenu(), CreationMenu(), LeaderboardMenu()]
+    Globals.menus = menus
     prev_menu = Globals.menu
     while Globals.run:
         if prev_menu != Globals.menu:
@@ -466,6 +480,11 @@ def main():
                             Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
                             Globals.menu = 1
 
+        if Globals.menu == 1 and Globals.GRID.started and not Globals.GRID.finished and not Globals.GRID.is_finished():
+            t = round(time.time() - Globals.GRID.time)
+            s = ('0' + str(t // 60))[-2:] + ':' + ('0' + str(t % 60))[-2:]
+            menus[1].sprites()[5].image = Fonts.TITLE.render(s, Colors.BLACK, False)
+
         screen.fill(menus[Globals.menu].bg)
 
         if Globals.menu == 1:
@@ -473,7 +492,7 @@ def main():
         menus[Globals.menu].draw(screen)
 
         pygame.display.flip()
-        pygame.time.wait(50)
+        pygame.time.wait(1000 // Globals.FPS)
 
 
 #############
