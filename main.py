@@ -259,15 +259,28 @@ class Grid(pygame.sprite.Group):
                     voisins_bombes += int(self.grid[y + (i - 1)][x + (j - 1)].is_bombe)  # Ajoute 1 si bombe, sinon 0
         return voisins_bombes
 
+    def count_near_flags(self, x, y):
+        voisins_flags = 0
+        for i in range(3):
+            for j in range(3):
+                if self.size >= y + i and 0 <= y + i - 1 and self.size >= x + j and 0 <= x + j - 1:
+                    voisins_flags += int(self.grid[y + (i - 1)][x + (j - 1)].is_flag)  # Ajoute 1 si bombe, sinon 0
+        return voisins_flags
+
     def case_press(self, x, y, bymachine=False):
         if 0 <= x < Globals.GRID_SIZE and 0 <= y < Globals.GRID_SIZE and not self.is_finished():
-            case = self.grid[y][x]
+            case: Case = self.grid[y][x]
             if not self.started:
                 self.start(x, y)  # placer les bombes sur le terrain
             if case.is_flag and not bymachine:
                 # print("Enlever le drapeau avant de découvrir la case")
                 return
-            if case.is_discovered:
+            if case.is_discovered and not bymachine:
+                if case.nb_bombes == self.count_near_flags(x, y):
+                    for i in range(3):
+                        for j in range(3):
+                            if self.size >= y + i and 0 <= y + i - 1 and self.size >= x + j and 0 <= x + j - 1 and not self.grid[y + (i - 1)][x + (j - 1)].is_flag:
+                                self.case_press(x + (j - 1), y + (i - 1), bymachine=True)
                 # print("Case déjà découverte, Rejouez")
                 return
             if case.is_bombe:
@@ -400,7 +413,7 @@ def main():
     screen = pygame.display.set_mode(Globals.ISIZE)
     Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
 
-    menus = [MainMenu(), GameMenu(), ChallengeMenu(), CreationMenu(), LeaderboardMenu()]
+    menus = [MainMenu(), GameMenu(), ChallengeMenu(), CreationMenu(), LeaderboardMenu(), FinishMenu()]
     Globals.menus = menus
     prev_menu = Globals.menu
     while Globals.run:
