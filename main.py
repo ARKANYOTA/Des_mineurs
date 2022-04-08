@@ -49,8 +49,8 @@ class Colors:
 
 class Fonts:
     _ = pygame.font.init()
-    TITLE = pygame.font.SysFont('calibri', 64, True, False)
-    BUTTON = pygame.font.SysFont('calibri', 50, True, False)
+    TITLE = pygame.font.Font('./ressources/fonts/Calibri_Bold.TTF', 64)
+    BUTTON = pygame.font.Font('./ressources/fonts/Calibri_Bold.TTF', 50)
 
 
 def image(name: str, size: tuple, angle: int =0, x_flip: bool = False, y_flip: bool = False):
@@ -72,8 +72,13 @@ class Images:
         return image('mine', (Globals.CASE_SIZE, Globals.CASE_SIZE))
 
     @staticmethod
-    def getMineExploded():
-        return image('mine-exploded', (Globals.CASE_SIZE, Globals.CASE_SIZE))
+    def getMineExploded(x = -1, y=-1):
+        if x==-1 and y==-1:
+            return image('mine-exploded', (Globals.CASE_SIZE, Globals.CASE_SIZE))
+        elif Globals.GRID.grid[y][x].is_flag:
+            return image('mine', (Globals.CASE_SIZE, Globals.CASE_SIZE))
+        else:
+            return image('mine-exploded', (Globals.CASE_SIZE, Globals.CASE_SIZE))
 
     @staticmethod
     def getButton(size=(256, 128)):
@@ -193,6 +198,17 @@ class LeaderboardMenu(pygame.sprite.Group):
         self.add(quit, title)
 
 
+class FinishMenu(pygame.sprite.Group):
+    def __init__(self):
+        super(FinishMenu, self).__init__()
+        self.bg = Colors.BG
+
+        quit = Button((750, 20), text='FIN TODO', size=(100, 50))
+        title = Sprite(Fonts.TITLE.render('Le Jeu des Mineurs', Colors.BLACK, False), (200, 10))
+
+        self.add(quit, title)
+
+
 class Grid(pygame.sprite.Group):
     def __init__(self, size: int, bombes: int):
         super().__init__()
@@ -289,7 +305,7 @@ class Grid(pygame.sprite.Group):
                 self.exploded = True
                 case.image = Images.getMineExploded()
                 for coord in self.bombes_list:
-                    self.grid[coord[1]][coord[0]].image = Images.getMineExploded()
+                    self.grid[coord[1]][coord[0]].image = Images.getMineExploded(coord[0],coord[1])
                 # print("Vous avez perdu, Dommage")
                 return
             elif not self.finished:
@@ -440,6 +456,9 @@ def main():
                         if sprite.text == 'Quitter':
                             Globals.run = False
                         elif sprite.text == 'Jouer':
+                            # Actualise les nombres sur le menu Jouer
+                            menus[3].sprites()[7].image = Fonts.BUTTON.render(str(Globals.BOMBES), Colors.BLACK, False)
+                            menus[3].sprites()[8].image = Fonts.BUTTON.render(str(Globals.GRID_SIZE), Colors.BLACK, False)
                             Globals.menu = 3
                             Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
                         elif sprite.text == 'Challenges':
@@ -449,20 +468,20 @@ def main():
                         elif sprite.text == 'Retour':
                             Globals.menu = 0
                         elif sprite.text == 'Facile':
-                            Globals.GRID_SIZE = 10
-                            Globals.BOMBES = 15
+                            Globals.GRID_SIZE = 8
+                            Globals.BOMBES = 10
                             Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT / Globals.GRID_SIZE
                             Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
                             Globals.menu = 1
                         elif sprite.text == 'Normal':
-                            Globals.GRID_SIZE = 20
-                            Globals.BOMBES = 60
+                            Globals.GRID_SIZE = 16
+                            Globals.BOMBES = 40
                             Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT / Globals.GRID_SIZE
                             Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
                             Globals.menu = 1
                         elif sprite.text == 'Difficile':
-                            Globals.GRID_SIZE = 30
-                            Globals.BOMBES = 150
+                            Globals.GRID_SIZE = 22
+                            Globals.BOMBES = 99
                             Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT / Globals.GRID_SIZE
                             Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
                             Globals.menu = 1
@@ -486,6 +505,10 @@ def main():
                                 menus[3].sprites()[8].image = Fonts.BUTTON.render(str(Globals.GRID_SIZE), Colors.BLACK, False)
                         elif sprite.name == 'remSize':
                             if Globals.GRID_SIZE > 5:
+                                if not Globals.BOMBES < Globals.GRID_SIZE ** 2 // 2:
+                                    Globals.BOMBES = Globals.GRID_SIZE ** 2 // 2 - 2
+                                    menus[3].sprites()[7].image = Fonts.BUTTON.render(str(Globals.BOMBES), Colors.BLACK, False)
+
                                 Globals.GRID_SIZE -= 1
                                 menus[3].sprites()[8].image = Fonts.BUTTON.render(str(Globals.GRID_SIZE), Colors.BLACK, False)
                         elif sprite.name == 'create':
@@ -505,6 +528,7 @@ def main():
         menus[Globals.menu].draw(screen)
 
         pygame.display.flip()
+        
         pygame.time.wait(1000 // Globals.FPS)
 
 
