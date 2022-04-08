@@ -45,12 +45,14 @@ class Colors:
     GREEN = pygame.Color(0, 255, 0)
     BLUE = pygame.Color(0, 0, 255)
     BG = pygame.Color(200, 200, 200)
+    GO = pygame.Color(200, 210, 150)
 
 
 class Fonts:
     _ = pygame.font.init()
     TITLE = pygame.font.Font('./ressources/fonts/Calibri_Bold.TTF', 64)
     BUTTON = pygame.font.Font('./ressources/fonts/Calibri_Bold.TTF', 50)
+    GO = pygame.font.Font('./ressources/fonts/Calibri_Bold.TTF', 32)
 
 
 def image(name: str, size: tuple, angle: int =0, x_flip: bool = False, y_flip: bool = False):
@@ -135,7 +137,7 @@ class GameMenu(pygame.sprite.Group):
         super(GameMenu, self).__init__()
         self.bg = Colors.BG
         s = pygame.surface.Surface((270, 600))
-        s.fill(Colors.WHITE)
+        s.fill(Colors.GO)
 
         quit = Button((750, 20), text='Retour', size=(100, 50))
         title = Sprite(Fonts.TITLE.render('Le Jeu des Mineurs', Colors.BLACK, False), (200, 10))
@@ -197,6 +199,23 @@ class LeaderboardMenu(pygame.sprite.Group):
 
         self.add(quit, title)
 
+class WinMenu(pygame.sprite.Group):
+    def __init__(self):
+        super(WinMenu, self).__init__()
+        self.bg = Colors.BG
+        replay = Button((650, 600), text='Rejouer', size=(200, 75), name='replay')
+        text = Sprite(Fonts.GO.render('Vous avez gagné !', Colors.BLACK, False), (635, 550))
+
+        self.add(replay, text)
+
+class GameOverMenu(pygame.sprite.Group):
+    def __init__(self):
+        super(GameOverMenu, self).__init__()
+        self.bg = Colors.BG
+        replay = Button((650, 600), text='Rejouer', size=(200, 75), name='replay')
+        text = Sprite(Fonts.GO.render('Vous avez perdu !', Colors.BLACK, False), (635, 550))
+
+        self.add(replay, text)
 
 class FinishMenu(pygame.sprite.Group):
     def __init__(self):
@@ -429,7 +448,7 @@ def main():
     screen = pygame.display.set_mode(Globals.ISIZE)
     Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
 
-    menus = [MainMenu(), GameMenu(), ChallengeMenu(), CreationMenu(), LeaderboardMenu(), FinishMenu()]
+    menus = [MainMenu(), GameMenu(), ChallengeMenu(), CreationMenu(), LeaderboardMenu(), WinMenu(), GameOverMenu()]
     Globals.menus = menus
     prev_menu = Globals.menu
     while Globals.run:
@@ -445,27 +464,31 @@ def main():
                 xPos, yPos = pygame.mouse.get_pos()
                 click = pygame.mouse.get_pressed(3)
                 if Globals.menu == 1:
-                    x, y = int((xPos - 10) / Globals.CASE_SIZE), int((yPos - 90) / Globals.CASE_SIZE)
-                    if click[0]:
-                        Globals.GRID.case_press(x, y)
-                    elif click[2]:
-                        Globals.GRID.case_press_flag(x, y)
+                    if not Globals.GRID.is_finished() and not Globals.GRID.finished:
+                        x, y = int((xPos - 10) / Globals.CASE_SIZE), int((yPos - 90) / Globals.CASE_SIZE)
+                        if click[0]:
+                            Globals.GRID.case_press(x, y)
+                        elif click[2]:
+                            Globals.GRID.case_press_flag(x, y)
+                    elif (Globals.GRID.is_finished() and menus[-1].sprites()[0].rect.collidepoint(xPos, yPos) and click[0]) or (Globals.GRID.finished and menus[-2].sprites()[0].rect.collidepoint(xPos, yPos) and click[0]):
+                        Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
                 for sprite in menus[Globals.menu].sprites():
                     if isinstance(sprite, Button) and sprite.rect.collidepoint(xPos, yPos) and click[0]:
                         sprite: Button
                         if sprite.text == 'Quitter':
                             Globals.run = False
-                        elif sprite.text == 'Jouer':
+                        if sprite.text == 'Jouer':
                             # Actualise les nombres sur le menu Jouer
                             menus[3].sprites()[7].image = Fonts.BUTTON.render(str(Globals.BOMBES), Colors.BLACK, False)
                             menus[3].sprites()[8].image = Fonts.BUTTON.render(str(Globals.GRID_SIZE), Colors.BLACK, False)
+                        if sprite.text == 'Jouer':
                             Globals.menu = 3
                             Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
-                        elif sprite.text == 'Challenges':
+                        if sprite.text == 'Challenges':
                             Globals.menu = 2
-                        elif sprite.text == 'Leaderboard':
+                        if sprite.text == 'Leaderboard':
                             Globals.menu = 4
-                        elif sprite.text == 'Retour':
+                        if sprite.text == 'Retour':
                             Globals.menu = 0
                         elif sprite.text == 'Facile':
                             Globals.GRID_SIZE = 8
@@ -485,25 +508,25 @@ def main():
                             Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT / Globals.GRID_SIZE
                             Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
                             Globals.menu = 1
-                        elif sprite.text == 'Impossible':
+                        if sprite.text == 'Impossible':
                             Globals.GRID_SIZE = 40
                             Globals.BOMBES = 300
                             Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT / Globals.GRID_SIZE
                             Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
                             Globals.menu = 1
-                        elif sprite.name == 'addMine':
+                        if sprite.name == 'addMine':
                             if Globals.BOMBES < Globals.GRID_SIZE ** 2 // 2:
                                 Globals.BOMBES += 1
                                 menus[3].sprites()[7].image = Fonts.BUTTON.render(str(Globals.BOMBES), Colors.BLACK, False)
-                        elif sprite.name == 'remMine':
+                        if sprite.name == 'remMine':
                             if Globals.BOMBES > 1:
                                 Globals.BOMBES -= 1
                                 menus[3].sprites()[7].image = Fonts.BUTTON.render(str(Globals.BOMBES), Colors.BLACK, False)
-                        elif sprite.name == 'addSize':
+                        if sprite.name == 'addSize':
                             if Globals.GRID_SIZE < 100:
                                 Globals.GRID_SIZE += 1
                                 menus[3].sprites()[8].image = Fonts.BUTTON.render(str(Globals.GRID_SIZE), Colors.BLACK, False)
-                        elif sprite.name == 'remSize':
+                        if sprite.name == 'remSize':
                             if Globals.GRID_SIZE > 5:
                                 if not Globals.BOMBES < Globals.GRID_SIZE ** 2 // 2:
                                     Globals.BOMBES = Globals.GRID_SIZE ** 2 // 2 - 2
@@ -511,10 +534,12 @@ def main():
 
                                 Globals.GRID_SIZE -= 1
                                 menus[3].sprites()[8].image = Fonts.BUTTON.render(str(Globals.GRID_SIZE), Colors.BLACK, False)
-                        elif sprite.name == 'create':
+                        if sprite.name == 'create':
                             Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT / Globals.GRID_SIZE
                             Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
                             Globals.menu = 1
+                        if sprite.name == 'replay':
+                            Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
 
         if Globals.menu == 1 and Globals.GRID.started and not Globals.GRID.finished and not Globals.GRID.is_finished():
             t = round(time.time() - Globals.GRID.time)
@@ -523,9 +548,13 @@ def main():
 
         screen.fill(menus[Globals.menu].bg)
 
+        menus[Globals.menu].draw(screen)
         if Globals.menu == 1:
             Globals.GRID.draw(screen)
-        menus[Globals.menu].draw(screen)
+            if Globals.GRID.is_finished():
+                menus[-2].draw(screen)
+            if Globals.GRID.finished:
+                menus[-1].draw(screen)
 
         pygame.display.flip()
         
