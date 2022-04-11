@@ -300,10 +300,10 @@ class Grid(pygame.sprite.Group):
 
         self.grid = []
         y, yi = 0, 0
-        while y < Globals.GRID_WIDTH_OR_HEIGHT:
+        while y < Globals.GRID_WIDTH_OR_HEIGHT-1:
             self.grid.append([])
             x, xi = 0, 0
-            while x < Globals.GRID_WIDTH_OR_HEIGHT:
+            while x < Globals.GRID_WIDTH_OR_HEIGHT-1:
                 img = image('cell-covered', size=(Globals.CASE_SIZE, Globals.CASE_SIZE))
                 self.grid[yi].append(Case(img, (10 + x, 90 + y), (xi, yi), self))
                 x += Globals.CASE_SIZE
