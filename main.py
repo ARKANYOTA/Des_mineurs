@@ -43,11 +43,12 @@ class SQL:
 
     def insert(self, name, time, difficulty):
         c = self.conn.cursor()
-        c.execute("""SELECT * FROM Leaderboard WHERE name = ? ORDER BY time ASC""", (name,))
-        if c.fetchall() is None:
+        c.execute("""SELECT * FROM Leaderboard WHERE difficulty = ? AND name = ? ORDER BY time ASC""", (difficulty, name,))
+        fetch = c.fetchone()
+        if fetch is None:
             c.execute("""INSERT INTO Leaderboard(name, time, difficulty) VALUES(?, ?, ?)""", (name, time, difficulty))
-        else:
-            c.execute("""UPDATE Leaderboard SET time = ? WHERE name = ? AND difficulty = ?""", (time, name, difficulty))
+        elif fetch[2] > time:
+                c.execute("""UPDATE Leaderboard SET time = ? WHERE name = ? AND difficulty = ?""", (time, name, difficulty))
         self.conn.commit()
         c.close()
 
@@ -63,7 +64,7 @@ class SQL:
             c = self.select(dif)
             for i in range(len(c)):
                 v = c[i]
-                Globals.menu[4].sprites()[6 + 5 * dif + i].image = Fonts.GO.render(str(v), Colors.BLACK, False)
+                Globals.menus[4].sprites()[6 + 5 * dif + i].image = Fonts.GO.render(f"{v[1].upper()} : {('0' + str(v[2] // 60))[-2:] + ':' + ('0' + str(v[2] % 60))[-2:]}", Colors.BLACK, False)
 
 
 class Globals:
@@ -244,16 +245,16 @@ class LeaderboardMenu(pygame.sprite.Group):
         title = Sprite(Fonts.TITLE.render('Le Jeu des Mineurs', Colors.BLACK, False), (200, 10))
 
         facile = Sprite(Fonts.TITLE.render('Facile', Colors.BLACK, False), (50, 100))
-        f = [Sprite(Fonts.TITLE.render('', Colors.BLACK, False), (50, 130 + (i*30))) for i in range(5)]
+        f = [Sprite(Fonts.TITLE.render('', Colors.BLACK, False), (50, 170 + (i*50))) for i in range(5)]
 
         normal = Sprite(Fonts.TITLE.render('Normal', Colors.BLACK, False), (500, 100))
-        n = [Sprite(Fonts.TITLE.render('', Colors.BLACK, False), (500, 130 + (i*30))) for i in range(5)]
+        n = [Sprite(Fonts.TITLE.render('', Colors.BLACK, False), (500, 170 + (i*50))) for i in range(5)]
 
         difficile = Sprite(Fonts.TITLE.render('Difficile', Colors.BLACK, False), (50, 400))
-        d = [Sprite(Fonts.TITLE.render('', Colors.BLACK, False), (50, 430 + (i*30))) for i in range(5)]
+        d = [Sprite(Fonts.TITLE.render('', Colors.BLACK, False), (50, 470 + (i*50))) for i in range(5)]
 
         impossible = Sprite(Fonts.TITLE.render('Impossible', Colors.BLACK, False), (500, 400))
-        i = [Sprite(Fonts.TITLE.render('', Colors.BLACK, False), (500, 430 + (i*30))) for i in range(5)]
+        i = [Sprite(Fonts.TITLE.render('', Colors.BLACK, False), (500, 470 + (i*50))) for i in range(5)]
 
         self.add(quit, title, facile, normal, difficile, impossible, *f, *n, *d, *i)
 
@@ -397,6 +398,7 @@ class Grid(pygame.sprite.Group):
             if self.is_finished():
                 if Globals.challenge >= 0:
                     Globals.SQL.insert(Globals.pseudo, int(time.time() - self.time), Globals.challenge)
+                    print("Inert", Globals.pseudo, int(time.time() - self.time), Globals.challenge)
                 for bombe in self.bombes_list:
                     self.grid[bombe[1]][bombe[0]].image = Images.getMine()
 
@@ -557,7 +559,7 @@ def main():
                         elif sprite.text == 'Facile':
                             Globals.challenge = 0
                             Globals.GRID_SIZE = 8
-                            Globals.BOMBES = 10
+                            Globals.BOMBES = 1  # 10
                             Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT / Globals.GRID_SIZE
                             Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
                             Globals.menu = 1
