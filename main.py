@@ -3,7 +3,7 @@
 # ┎━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 # ┃ Nom:Carlisi Nolan, Billotte Théodore TG 04 ┃
 # ┃ Fichier: main.py                           ┃
-# ┃ Exercice Des Mineurs (M. Rive)             ┃
+# ┃ Exercice Des Mineurs                       ┃
 # ┖━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 #############
@@ -11,7 +11,9 @@
 #############
 import random
 import time
+import os
 
+import sqlite3
 import pygame
 import sys
 import os
@@ -23,17 +25,61 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 #############
 #  CLASSES  #
 #############
+class SQL:
+    def __init__(self):
+        self.conn = sqlite3.connect('data.db')
+        self.create_table()
+
+    def create_table(self):
+        c = self.conn.cursor()
+        c.execute("""CREATE TABLE IF NOT EXISTS Leaderboard(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            time INTEGER,
+            difficulty INTEGER
+        )""")
+        self.conn.commit()
+        c.close()
+
+    def insert(self, name, time, difficulty):
+        c = self.conn.cursor()
+        c.execute("""SELECT * FROM Leaderboard WHERE name = ? ORDER BY time ASC""", (name,))
+        if c.fetchall() is None:
+            c.execute("""INSERT INTO Leaderboard(name, time, difficulty) VALUES(?, ?, ?)""", (name, time, difficulty))
+        else:
+            c.execute("""UPDATE Leaderboard SET time = ? WHERE name = ? AND difficulty = ?""", (time, name, difficulty))
+        self.conn.commit()
+        c.close()
+
+    def select(self, difficulty):
+        c = self.conn.cursor()
+        c.execute("""SELECT * FROM Leaderboard WHERE difficulty = ? ORDER BY time ASC LIMIT 5""", (difficulty,))
+        data = c.fetchall()
+        c.close()
+        return data
+
+    def affiche(self):
+        for dif in range(4):
+            c = self.select(dif)
+            for i in range(len(c)):
+                v = c[i]
+                Globals.menu[4].sprites()[6 + 5 * dif + i].image = Fonts.GO.render(str(v), Colors.BLACK, False)
+
+
 class Globals:
     # STATICS
     GRID_SIZE = 12
     GRID_WIDTH_OR_HEIGHT = 600
     ISIZE = WIDTH, HEIGHT = 900, 700
     CASE_SIZE = GRID_WIDTH_OR_HEIGHT / GRID_SIZE
+    SQL = SQL()
     BOMBES = 5
     GRID = None
     FPS = 30
 
     # GLOBAL VARIABLES
+    pseudo = os.getlogin()
+    challenge = -1
     run = True
     menu = 0
 
@@ -197,7 +243,19 @@ class LeaderboardMenu(pygame.sprite.Group):
         quit = Button((750, 20), text='Retour', size=(100, 50))
         title = Sprite(Fonts.TITLE.render('Le Jeu des Mineurs', Colors.BLACK, False), (200, 10))
 
-        self.add(quit, title)
+        facile = Sprite(Fonts.TITLE.render('Facile', Colors.BLACK, False), (50, 100))
+        f = [Sprite(Fonts.TITLE.render('', Colors.BLACK, False), (50, 130 + (i*30))) for i in range(5)]
+
+        normal = Sprite(Fonts.TITLE.render('Normal', Colors.BLACK, False), (500, 100))
+        n = [Sprite(Fonts.TITLE.render('', Colors.BLACK, False), (500, 130 + (i*30))) for i in range(5)]
+
+        difficile = Sprite(Fonts.TITLE.render('Difficile', Colors.BLACK, False), (50, 400))
+        d = [Sprite(Fonts.TITLE.render('', Colors.BLACK, False), (50, 430 + (i*30))) for i in range(5)]
+
+        impossible = Sprite(Fonts.TITLE.render('Impossible', Colors.BLACK, False), (500, 400))
+        i = [Sprite(Fonts.TITLE.render('', Colors.BLACK, False), (500, 430 + (i*30))) for i in range(5)]
+
+        self.add(quit, title, facile, normal, difficile, impossible, *f, *n, *d, *i)
 
 class WinMenu(pygame.sprite.Group):
     def __init__(self):
@@ -337,6 +395,8 @@ class Grid(pygame.sprite.Group):
                 else:
                     self.grid[y][x].is_discovered = True
             if self.is_finished():
+                if Globals.challenge >= 0:
+                    Globals.SQL.insert(Globals.pseudo, int(time.time() - self.time), Globals.challenge)
                 for bombe in self.bombes_list:
                     self.grid[bombe[1]][bombe[0]].image = Images.getMine()
 
@@ -460,6 +520,7 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 Globals.run = False
+                Globals.SQL.conn.close()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 xPos, yPos = pygame.mouse.get_pos()
                 click = pygame.mouse.get_pressed(3)
@@ -477,6 +538,7 @@ def main():
                         sprite: Button
                         if sprite.text == 'Quitter':
                             Globals.run = False
+                            Globals.SQL.conn.close()
                         if sprite.text == 'Jouer':
                             # Actualise les nombres sur le menu Jouer
                             menus[3].sprites()[7].image = Fonts.BUTTON.render(str(Globals.BOMBES), Colors.BLACK, False)
@@ -484,31 +546,37 @@ def main():
                         if sprite.text == 'Jouer':
                             Globals.menu = 3
                             Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
+                            Globals.challenge = -1
                         if sprite.text == 'Challenges':
                             Globals.menu = 2
                         if sprite.text == 'Leaderboard':
                             Globals.menu = 4
+                            Globals.SQL.affiche()
                         if sprite.text == 'Retour':
                             Globals.menu = 0
                         elif sprite.text == 'Facile':
+                            Globals.challenge = 0
                             Globals.GRID_SIZE = 8
                             Globals.BOMBES = 10
                             Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT / Globals.GRID_SIZE
                             Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
                             Globals.menu = 1
                         elif sprite.text == 'Normal':
+                            Globals.challenge = 1
                             Globals.GRID_SIZE = 16
                             Globals.BOMBES = 40
                             Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT / Globals.GRID_SIZE
                             Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
                             Globals.menu = 1
                         elif sprite.text == 'Difficile':
+                            Globals.challenge = 2
                             Globals.GRID_SIZE = 22
                             Globals.BOMBES = 99
                             Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT / Globals.GRID_SIZE
                             Globals.GRID = Grid(Globals.GRID_SIZE, Globals.BOMBES)
                             Globals.menu = 1
                         if sprite.text == 'Impossible':
+                            Globals.challenge = 3
                             Globals.GRID_SIZE = 40
                             Globals.BOMBES = 300
                             Globals.CASE_SIZE = Globals.GRID_WIDTH_OR_HEIGHT / Globals.GRID_SIZE
